@@ -1,0 +1,19 @@
+{
+  "name": "counsellor-event-system",
+  "version": "3.6.0",
+  "description": "Fix admin Set buttons using capture handler; move Sent By/Payment to far right",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.0.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1"
+  }
+}

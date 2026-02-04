@@ -1,0 +1,2844 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Dashboard</title>
+  <link rel="stylesheet" href="/styles.css?v=2" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- Chart.js for Statistics -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="brand">
+        <img src="/logo.jpg" alt="Logo" class="logo">
+        <div>
+          <p class="h1">Admin Dashboard</p>
+          <p class="sub">Manage events, staffing, and counsellor accounts</p>
+        </div>
+      </div>
+      <div class="actions" style="margin:0;">
+        <span id="who" class="pill">—</span>
+
+        <!-- Notification Bell -->
+        <div class="notification-bell">
+          <button id="notificationTrigger" class="notification-trigger" type="button" title="Notifications">
+            <i data-lucide="bell"></i>
+            <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+          </button>
+          <div class="notification-dropdown" id="notificationDropdown" style="display:none;">
+            <div class="notification-header">
+              <h3>Notifications</h3>
+              <button class="btn tiny" id="markAllRead" type="button">Mark all read</button>
+            </div>
+            <div class="notification-list" id="notificationList">
+              <div class="notification-empty">
+                <i data-lucide="bell-off"></i>
+                <p>Loading...</p>
+              </div>
+            </div>
+            <div class="notification-footer">
+              <a href="#" id="viewAllNotifications">View all notifications</a>
+            </div>
+          </div>
+        </div>
+
+        <button id="csvBtn" class="btn" type="button">
+          <i data-lucide="file-spreadsheet"></i> CSV
+        </button>
+        <button id="pdfBtn" class="btn primary" type="button">
+          <i data-lucide="file-text"></i> PDF
+        </button>
+        <button id="logout" class="btn danger" type="button">
+          <i data-lucide="log-out"></i> Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-icon blue">
+          <i data-lucide="calendar-days"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total Events</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">
+          <i data-lucide="clock"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-label">Pending Review</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">
+          <i data-lucide="check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statConfirmed">0</div>
+          <div class="stat-label">Confirmed Events</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <i data-lucide="users"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statCounsellors">0</div>
+          <div class="stat-label">Active Counsellors</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="events">
+        <i data-lucide="calendar"></i>
+        Event Submissions
+      </button>
+      <button class="tab-btn" data-tab="counsellors">
+        <i data-lucide="settings"></i>
+        System Settings
+      </button>
+      <button class="tab-btn" data-tab="statistics">
+        <i data-lucide="bar-chart-3"></i>
+        Statistics
+      </button>
+    </div>
+
+    <!-- TAB: EVENT SUBMISSIONS -->
+    <div class="tab-content active" id="tab-events">
+      <section class="card">
+        <!-- ACTION BAR -->
+        <div class="action-bar">
+          <div class="action-bar-left">
+            <div class="search-wrapper">
+              <i data-lucide="search"></i>
+              <input type="text" class="search-input" id="searchEvents" placeholder="Search events..."
+                autocomplete="off">
+            </div>
+            <button id="refreshEvents" class="btn" type="button">
+              <i data-lucide="refresh-cw"></i> Refresh
+            </button>
+            <button id="toggleCols" class="btn" type="button">
+              <i data-lucide="eye-off"></i> Hide Info
+            </button>
+            <button id="toggleStaffing" class="btn" type="button">
+              <i data-lucide="users-round"></i> Hide Staffing
+            </button>
+          </div>
+          <div class="action-bar-right">
+            <span id="count" class="pill">—</span>
+          </div>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="filter-bar"
+          style="background:var(--bg-subtle); padding:20px; border-radius:var(--radius); margin-bottom:20px;">
+          <div class="filter-grid">
+            <div>
+              <label>Counsellor</label>
+              <select id="f_counsellor">
+                <option value="">All Counsellors</option>
+              </select>
+            </div>
+            <div>
+              <label>Status</label>
+              <select id="f_status">
+                <option value="" selected>All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="not_applicable">Not Applicable</option>
+              </select>
+            </div>
+            <div>
+              <label>Month</label>
+              <select id="f_month">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </div>
+            <div>
+              <label>City</label>
+              <input id="f_city" list="dl_city" placeholder="e.g. London" autocomplete="off" />
+              <datalist id="dl_city"></datalist>
+            </div>
+            <div>
+              <label>Country</label>
+              <select id="f_country">
+                <option value="">All Countries</option>
+              </select>
+            </div>
+            <div>
+              <label>Organizer</label>
+              <input id="f_organizer" list="dl_organizer" placeholder="e.g. School Name" autocomplete="off" />
+              <datalist id="dl_organizer"></datalist>
+            </div>
+          </div>
+          <div
+            style="margin-top:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="font-size:12px; color:var(--muted);" id="activeFilters">Showing all events</div>
+            <button id="applyFilters" class="btn primary">
+              <i data-lucide="filter"></i> Apply Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="tablewrap">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th>DATES</th>
+                <th>LOCATION</th>
+                <th>ORGANIZER</th>
+                <th>EVENT STATUS</th>
+                <th class="col-staffing">STAFFING</th>
+                <th class="col-pay">PAYMENT</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <p id="msg" class="msg"></p>
+      </section>
+    </div>
+
+    <!-- TAB: COUNSELLOR ACCOUNTS -->
+    <div class="tab-content" id="tab-counsellors">
+      <!-- DUAL PANEL LAYOUT -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+
+        <!-- LEFT PANEL: Counsellor Accounts -->
+        <section class="card">
+          <div class="section-header">
+            <div class="section-title">
+              <i data-lucide="user-plus"></i>
+              <h2>Add New Counsellor</h2>
+            </div>
+            <button id="refreshUsers" class="btn" type="button">
+              <i data-lucide="refresh-cw"></i> Refresh
+            </button>
+          </div>
+
+          <form id="addUserForm">
+            <div class="grid">
+              <div><label>Full name *</label><input name="full_name" required placeholder="Enter full name"
+                  autocomplete="off" /></div>
+              <div><label>Username *</label><input name="username" required placeholder="Enter username"
+                  autocomplete="off" /></div>
+              <div><label>Password *</label><input name="password" type="password" required placeholder="Enter password"
+                  autocomplete="new-password" /></div>
+              <div>
+                <label>Status</label>
+                <select name="is_active">
+                  <option value="1" selected>Active</option>
+                  <option value="0">Inactive</option>
+                </select>
+              </div>
+              <div style="grid-column:1/-1;">
+                <label><i data-lucide="globe"
+                    style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Assign Countries
+                  (optional)</label>
+                <div style="margin-top:8px;margin-bottom:8px;">
+                  <input type="text" id="addUserCountrySearch" placeholder="🔍 Search countries..."
+                    style="width:100%;" />
+                </div>
+                <div class="scroll-list" style="max-height:150px;border:1px solid var(--border);border-radius:8px;">
+                  <div class="list" id="addUserCountryList"></div>
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" type="submit">
+                <i data-lucide="plus"></i> Add Counsellor
+              </button>
+              <span id="userMsg" class="msg"></span>
+            </div>
+          </form>
+
+          <div class="hr"></div>
+
+          <div class="section-header">
+            <div class="section-title">
+              <i data-lucide="users"></i>
+              <h2>All Counsellors</h2>
+            </div>
+          </div>
+
+          <div class="scroll-list" style="max-height:400px;">
+            <div class="list" id="userList"></div>
+          </div>
+
+          <p class="sub" style="margin-top:12px;">
+            <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+            Deactivate removes login + availability. Existing confirmed assignments remain recorded.
+          </p>
+        </section>
+
+        <!-- RIGHT PANEL: Country Coverage -->
+        <section class="card">
+          <div class="section-header">
+            <div class="section-title">
+              <i data-lucide="globe"></i>
+              <h2>Country Coverage</h2>
+            </div>
+            <button id="refreshCountryCoverage" class="btn" type="button">
+              <i data-lucide="refresh-cw"></i> Refresh
+            </button>
+          </div>
+          <p class="sub" style="margin-bottom:16px;">
+            View which counsellors are assigned to each country. Click to expand.
+          </p>
+
+          <div class="hr"></div>
+
+          <!-- Search Countries -->
+          <div style="margin-bottom:16px;">
+            <input type="text" id="countrySearch" placeholder="🔍 Search countries..." style="width:100%;" />
+          </div>
+
+          <!-- Country List -->
+          <div class="scroll-list" style="max-height:500px;">
+            <div id="countryCoverageList"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- EVENT PRESETS SECTION -->
+      <section class="card" style="margin-top:24px;">
+        <div class="section-header">
+          <div class="section-title">
+            <i data-lucide="settings-2"></i>
+            <h2>Event Presets</h2>
+          </div>
+        </div>
+        <p class="sub" style="margin-bottom:20px;">
+          Manage dropdown options for event submissions. Counsellors will select from these presets.
+        </p>
+
+        <div class="hr"></div>
+
+        <!-- ORGANIZERS -->
+        <div style="margin-bottom:32px;">
+          <div class="section-header" style="margin:16px 0;">
+            <div class="section-title">
+              <i data-lucide="building-2"></i>
+              <h3 style="margin:0;">Organizers</h3>
+            </div>
+            <span class="pill" id="orgCount">0</span>
+          </div>
+          <form id="addOrgForm" style="display:flex; gap:12px; margin-bottom:12px;">
+            <input name="name" required placeholder="e.g. Oxford University" style="flex:1;" autocomplete="off" />
+            <button class="btn primary" type="submit">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </form>
+          <div class="scroll-list" style="max-height:200px;">
+            <div class="list" id="orgList"></div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <!-- EVENT NAMES -->
+        <div style="margin-bottom:32px;">
+          <div class="section-header" style="margin:16px 0;">
+            <div class="section-title">
+              <i data-lucide="tag"></i>
+              <h3 style="margin:0;">Event Names</h3>
+            </div>
+            <span class="pill" id="evtNameCount">0</span>
+          </div>
+          <form id="addEvtNameForm" style="display:flex; gap:12px; margin-bottom:12px;">
+            <input name="name" required placeholder="e.g. Spring Fair, Open Day" style="flex:1;" autocomplete="off" />
+            <button class="btn primary" type="submit">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </form>
+          <div class="scroll-list" style="max-height:200px;">
+            <div class="list" id="evtNameList"></div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <!-- EVENT TYPES -->
+        <div>
+          <div class="section-header" style="margin:16px 0;">
+            <div class="section-title">
+              <i data-lucide="layers"></i>
+              <h3 style="margin:0;">Event Types</h3>
+            </div>
+            <span class="pill" id="evtTypeCount">0</span>
+          </div>
+          <form id="addEvtTypeForm" style="display:flex; gap:12px; margin-bottom:12px;">
+            <input name="name" required placeholder="e.g. University Fair, School Visit" style="flex:1;"
+              autocomplete="off" />
+            <button class="btn primary" type="submit">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </form>
+          <div class="scroll-list" style="max-height:200px;">
+            <div class="list" id="evtTypeList"></div>
+          </div>
+        </div>
+
+        <span id="presetMsg" class="msg"></span>
+      </section>
+
+      <!-- NOTIFICATION SETTINGS SECTION -->
+      <section class="card" style="margin-top:24px;">
+        <div class="section-header">
+          <div class="section-title">
+            <i data-lucide="bell-ring"></i>
+            <h2>Notification Settings</h2>
+          </div>
+          <button id="refreshNotificationSettings" class="btn" type="button">
+            <i data-lucide="refresh-cw"></i> Refresh
+          </button>
+        </div>
+        <p class="sub" style="margin-bottom:20px;">
+          Configure intelligent alerts and notification preferences for the system.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="notification-settings">
+          <!-- Event Reminders -->
+          <div class="notification-setting-row">
+            <div class="notification-setting-info">
+              <label>Event Proximity Reminders</label>
+              <p>Alert when events approach without confirmed staffing</p>
+            </div>
+            <div class="notification-setting-control">
+              <label class="toggle">
+                <input type="checkbox" id="eventReminderEnabled" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Duplicate Detection -->
+          <div class="notification-setting-row">
+            <div class="notification-setting-info">
+              <label>Duplicate Event Detection</label>
+              <p>Detect when new submissions match existing events</p>
+            </div>
+            <div class="notification-setting-control">
+              <label class="toggle">
+                <input type="checkbox" id="duplicateDetectionEnabled" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Staffing Warnings -->
+          <div class="notification-setting-row">
+            <div class="notification-setting-info">
+              <label>Proactive Staffing Warnings</label>
+              <p>Alert when counsellors are overloaded or events are unassigned</p>
+            </div>
+            <div class="notification-setting-control">
+              <label class="toggle">
+                <input type="checkbox" id="staffingWarningEnabled" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Anomaly Detection -->
+          <div class="notification-setting-row">
+            <div class="notification-setting-info">
+              <label>Anomaly Detection</label>
+              <p>Detect unusual patterns like bulk deletions or volume spikes</p>
+            </div>
+            <div class="notification-setting-control">
+              <label class="toggle">
+                <input type="checkbox" id="anomalyDetectionEnabled" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Weekly Reports -->
+          <div class="notification-setting-row">
+            <div class="notification-setting-info">
+              <label>Weekly Intelligence Report</label>
+              <p>Receive a weekly summary of staffing gaps and pending events</p>
+            </div>
+            <div class="notification-setting-control">
+              <label class="toggle">
+                <input type="checkbox" id="weeklyReportEnabled" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Manual Trigger Buttons -->
+          <div class="hr"></div>
+
+          <div style="margin-top:16px;">
+            <label style="font-weight:600; margin-bottom:12px; display:block;">Manual Triggers (Testing)</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn small" id="triggerReminders" type="button">
+                <i data-lucide="clock"></i> Check Reminders
+              </button>
+              <button class="btn small" id="triggerOverload" type="button">
+                <i data-lucide="alert-triangle"></i> Check Overload
+              </button>
+              <button class="btn small" id="triggerAnomalies" type="button">
+                <i data-lucide="activity"></i> Check Anomalies
+              </button>
+              <button class="btn small" id="triggerWeeklyReport" type="button">
+                <i data-lucide="file-text"></i> Generate Report
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions" style="margin-top:24px;">
+          <button class="btn primary" id="saveNotificationSettings" type="button">
+            <i data-lucide="save"></i> Save Settings
+          </button>
+          <span id="notificationSettingsMsg" class="msg"></span>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB: STATISTICS -->
+    <div class="tab-content" id="tab-statistics">
+      <section class="card">
+        <div class="section-header" style="margin-bottom:24px;">
+          <div class="section-title">
+            <i data-lucide="bar-chart-3"></i>
+            <h2>Dashboard Analytics</h2>
+          </div>
+        </div>
+
+        <!-- Stats Summary Cards -->
+        <div class="stats-grid" style="margin-bottom:32px;">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <i data-lucide="calendar-days"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="statsTotal">0</div>
+              <div class="stat-label">Total Events</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <i data-lucide="check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="statsConfirmRate">0%</div>
+              <div class="stat-label">Confirmation Rate</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <i data-lucide="globe"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="statsCountries">0</div>
+              <div class="stat-label">Countries Covered</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow">
+              <i data-lucide="credit-card"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="statsPaidRate">0%</div>
+              <div class="stat-label">Paid Events</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+          <!-- Events by Month -->
+          <div class="chart-container">
+            <h3><i data-lucide="trending-up"
+                style="width:18px;height:18px;vertical-align:middle;margin-right:8px;"></i>Events by Month</h3>
+            <div style="height:280px;"><canvas id="chartMonthly"></canvas></div>
+          </div>
+
+          <!-- Events by Country -->
+          <div class="chart-container">
+            <h3><i data-lucide="map-pin" style="width:18px;height:18px;vertical-align:middle;margin-right:8px;"></i>Top
+              Countries</h3>
+            <div style="height:280px;"><canvas id="chartCountry"></canvas></div>
+          </div>
+
+          <!-- Counsellor Leaderboard -->
+          <div class="chart-container">
+            <h3><i data-lucide="award"
+                style="width:18px;height:18px;vertical-align:middle;margin-right:8px;"></i>Counsellor Leaderboard</h3>
+            <div style="height:280px;"><canvas id="chartCounsellors"></canvas></div>
+          </div>
+
+          <!-- Payment Distribution -->
+          <div class="chart-container chart-small">
+            <h3><i data-lucide="pie-chart"
+                style="width:18px;height:18px;vertical-align:middle;margin-right:8px;"></i>Payment Status</h3>
+            <div style="height:220px;"><canvas id="chartPayment"></canvas></div>
+          </div>
+
+          <!-- Event Status -->
+          <div class="chart-container chart-small">
+            <h3><i data-lucide="activity"
+                style="width:18px;height:18px;vertical-align:middle;margin-right:8px;"></i>Event Status</h3>
+            <div style="height:220px;"><canvas id="chartStatus"></canvas></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- NOT LOGGED IN -->
+    <div id="needLogin" class="card" style="display:none; text-align:center; padding:48px;">
+      <div style="margin-bottom:16px;">
+        <i data-lucide="lock" style="width:48px;height:48px;color:var(--muted);"></i>
+      </div>
+      <p class="h1">You are not logged in as Admin</p>
+      <p class="sub">Please sign in as admin to access this dashboard.</p>
+      <div class="actions" style="justify-content:center;">
+        <a class="btn primary" href="/login.html">
+          <i data-lucide="log-in"></i> Go to Login
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINALIZE STAFFING MODAL -->
+  <div class="modal-backdrop" id="modalBack">
+    <div class="modal" style="max-width:700px;">
+      <h2><i data-lucide="clipboard-check"
+          style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>Finalize Staffing</h2>
+      <p id="modalMeta" class="sub">—</p>
+      <div class="hr" style="margin:16px 0;"></div>
+      <div class="split">
+        <div>
+          <label>Select Counsellors</label>
+          <div class="scroll-list" style="max-height:300px;">
+            <div class="list" id="cList"></div>
+          </div>
+          <p class="sub" style="margin-top:10px;">🟢 Available • 🔴 Busy (overlapping confirmed event)</p>
+        </div>
+        <div>
+          <label>Proposed by Counsellor</label>
+          <div class="hint" id="proposedBox">—</div>
+          <div style="height:24px;"></div>
+          <div class="actions" style="margin-top:0;">
+            <button class="btn primary" id="saveFinalize" type="button">
+              <i data-lucide="check"></i> Confirm & Save
+            </button>
+            <button class="btn" id="cancelFinalize" type="button">Cancel</button>
+          </div>
+          <span id="modalMsg" class="msg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT COUNSELLOR MODAL -->
+  <div class="modal-backdrop" id="userBack" style="z-index:99999;">
+    <div class="modal" style="max-width:600px;">
+      <h2><i data-lucide="user-cog" style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>Edit
+        Counsellor</h2>
+      <p id="userMeta" class="sub">—</p>
+      <div class="hr" style="margin:16px 0;"></div>
+      <div class="grid" style="gap:16px;">
+        <div><label>Full name</label><input id="editName" placeholder="Full name" autocomplete="off" /></div>
+        <div>
+          <label>Status</label>
+          <select id="editActive">
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label>New password (leave blank to keep)</label>
+          <input id="editPass" type="password" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+      </div>
+
+      <div class="hr" style="margin:16px 0;"></div>
+
+      <!-- Country Assignment Section -->
+      <div>
+        <label><i data-lucide="globe" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+          Assigned Countries</label>
+        <p class="sub" style="margin-bottom:12px;">Select countries this counsellor handles. They will be recommended
+          when events are created for these countries.</p>
+        <div style="margin-bottom:8px;">
+          <input type="text" id="editCountrySearch" placeholder="🔍 Search countries..." style="width:100%;" />
+        </div>
+        <div class="scroll-list" style="max-height:180px;">
+          <div class="list" id="editCountryList"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="saveUser" type="button">
+          <i data-lucide="save"></i> Save Changes
+        </button>
+        <button class="btn" id="cancelUser" type="button">Cancel</button>
+        <span id="userEditMsg" class="msg"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF COLUMN SELECT MODAL -->
+  <div class="modal-backdrop" id="pdfBack" style="z-index:9999;">
+    <div class="modal" style="max-width:420px;">
+      <h2><i data-lucide="file-text" style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>Export
+        to PDF</h2>
+      <p class="sub">Choose which columns to include in the report.</p>
+      <div class="hr" style="margin:16px 0;"></div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <label class="checkbox"><input type="checkbox" checked value="dates"> Dates</label>
+        <label class="checkbox"><input type="checkbox" checked value="location"> Location</label>
+        <label class="checkbox"><input type="checkbox" checked value="organizer"> Organizer</label>
+        <label class="checkbox"><input type="checkbox" checked value="event_status"> Event Status</label>
+        <label class="checkbox"><input type="checkbox" checked value="status"> Status (Pending/Confirmed)</label>
+        <label class="checkbox"><input type="checkbox" checked value="assigned"> Assigned Staff</label>
+        <label class="checkbox"><input type="checkbox" checked value="sent_by"> Sent By</label>
+        <label class="checkbox"><input type="checkbox" checked value="payment"> Payment</label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="generatePdf" type="button">
+          <i data-lucide="download"></i> Generate PDF
+        </button>
+        <button class="btn" id="cancelPdf" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- MANAGE DRAWER MODAL -->
+  <div class="drawer-backdrop" id="manageBack">
+    <div class="drawer-modal">
+      <div class="drawer-header">
+        <div>
+          <h2><i data-lucide="settings-2"
+              style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>Manage Event</h2>
+          <p id="manageMeta" class="sub">—</p>
+        </div>
+        <button class="btn" id="closeManage" type="button">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+
+      <!-- Cancelled Event Notice (shown when event is cancelled) -->
+      <div class="drawer-notice cancelled" id="cancelledNotice" style="display:none;">
+        <i data-lucide="alert-circle" style="width:18px;height:18px;"></i>
+        <span>This event is <strong>cancelled</strong>. No further changes can be made.</span>
+      </div>
+
+      <!-- Postponed Event Notice (shown when event is postponed) -->
+      <div class="drawer-notice postponed" id="postponedNotice" style="display:none;">
+        <i data-lucide="clock" style="width:18px;height:18px;"></i>
+        <span>This event is <strong>postponed</strong>. Please set new dates to continue.</span>
+        <button class="btn small" id="setNewDatesBtn" type="button">Set New Dates</button>
+      </div>
+
+      <!-- Completed Event Notice (shown when event is completed) -->
+      <div class="drawer-notice completed" id="completedNotice" style="display:none;">
+        <i data-lucide="check-circle" style="width:18px;height:18px;"></i>
+        <span>This event is <strong>completed</strong>. Staffing is locked but you can still edit remarks and
+          payment.</span>
+      </div>
+
+      <div class="drawer-tabs">
+        <button class="drawer-tab active" data-drawer-tab="staffing">
+          <i data-lucide="users" style="width:16px;height:16px;"></i> Staffing
+        </button>
+        <button class="drawer-tab" data-drawer-tab="payment">
+          <i data-lucide="credit-card" style="width:16px;height:16px;"></i> Payment
+        </button>
+        <button class="drawer-tab" data-drawer-tab="remarks">
+          <i data-lucide="message-square" style="width:16px;height:16px;"></i> Remarks
+        </button>
+        <button class="drawer-tab" data-drawer-tab="event">
+          <i data-lucide="calendar" style="width:16px;height:16px;"></i> Event
+        </button>
+      </div>
+
+      <!-- Tab Content: Staffing -->
+      <div class="drawer-content active" id="drawer-staffing">
+        <div class="drawer-section">
+          <label>Current Status</label>
+          <div id="manageStaffingStatus" class="mb-16">—</div>
+
+          <label>Assign Counsellors</label>
+          <div class="scroll-list" style="max-height:250px;">
+            <div class="list" id="manageCounsellorList"></div>
+          </div>
+          <p class="sub" style="margin-top:10px;">🟢 Available • 🔴 Busy (overlapping confirmed event)</p>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+            <label style="margin:0;">Proposed by Counsellor</label>
+            <button class="btn tiny" id="selectProposedBtn" type="button" style="display:none;">
+              <i data-lucide="check-square" style="width:12px;height:12px;"></i> Select These
+            </button>
+          </div>
+          <div class="hint" id="manageProposed">—</div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Payment -->
+      <div class="drawer-content" id="drawer-payment">
+        <div class="drawer-section">
+          <label>Sent By</label>
+          <select id="manageSentBy" class="table-select" style="width:100%;">
+            <option value="">— None —</option>
+          </select>
+
+          <label style="margin-top:16px;">Payment Status</label>
+          <div class="payment-options" id="managePaymentOptions">
+            <label class="payment-option">
+              <input type="radio" name="paymentOpt" value="UNPAID">
+              <span class="badge pending">UNPAID</span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="paymentOpt" value="PAID">
+              <span class="badge ok">PAID</span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="paymentOpt" value="FREE">
+              <span class="badge blue">FREE</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Remarks -->
+      <div class="drawer-content" id="drawer-remarks">
+        <div class="drawer-section">
+          <label>Event Remarks</label>
+          <textarea id="manageRemarks" rows="8" placeholder="Enter remarks for this event..."
+            style="width:100%;resize:vertical;"></textarea>
+        </div>
+      </div>
+
+      <!-- Tab Content: Event -->
+      <div class="drawer-content" id="drawer-event">
+        <div class="drawer-section">
+          <label>Event Information</label>
+          <div class="info-grid" id="manageEventInfo">
+            <!-- Populated by JS -->
+          </div>
+
+          <label style="margin-top:16px;">Event Status</label>
+          <select id="manageEventStatus" class="table-select" style="width:100%;">
+            <option value="ONGOING">Ongoing</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="POSTPONED">Postponed</option>
+          </select>
+          <p class="sub" style="margin-top:8px;">
+            <i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;color:var(--warn);"></i>
+            Setting to Cancelled/Postponed will clear all staffing assignments. Completed events are locked but allow
+            editing remarks and payment.
+          </p>
+        </div>
+      </div>
+
+      <!-- Unified Footer -->
+      <div class="drawer-footer">
+        <button class="btn primary" id="saveAllChanges" type="button">
+          <i data-lucide="check"></i> Update
+        </button>
+        <button class="btn danger" id="deleteEventBtn" type="button">
+          <i data-lucide="trash-2"></i> Delete
+        </button>
+        <span id="drawerMsg" class="msg"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- POSTPONED DATE PICKER MODAL -->
+  <div class="modal-backdrop" id="postponedDatesBack">
+    <div class="modal" style="max-width:450px;">
+      <h2><i data-lucide="calendar-clock" style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>Set
+        New Event Dates</h2>
+      <p class="sub" id="postponedDatesMeta">Reschedule this postponed event</p>
+
+      <div class="form-row" style="margin-top:20px;">
+        <label for="newStartDate">Start Date *</label>
+        <input type="date" id="newStartDate" class="table-select" style="width:100%;" required>
+      </div>
+
+      <div class="form-row" style="margin-top:12px;">
+        <label for="newEndDate">End Date *</label>
+        <input type="date" id="newEndDate" class="table-select" style="width:100%;" required>
+      </div>
+
+      <div class="modal-actions" style="margin-top:20px; display:flex; gap:12px;">
+        <button class="btn primary" id="confirmNewDates" type="button">
+          <i data-lucide="check"></i> Confirm New Dates
+        </button>
+        <button class="btn" id="cancelNewDates" type="button">Cancel</button>
+      </div>
+      <span id="postponedDatesMsg" class="msg"></span>
+    </div>
+  </div>
+
+  <!-- INITIALIZE LUCIDE ICONS -->
+  <script>
+    lucide.createIcons();
+  </script>
+
+  <!-- TAB SWITCHING LOGIC -->
+  <script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+      });
+    });
+  </script>
+
+  <!-- PDF LOGIC ISOLATED -->
+  <script>
+    (function () {
+      try {
+        const back = document.getElementById("pdfBack");
+        const btn = document.getElementById("pdfBtn");
+        const cancel = document.getElementById("cancelPdf");
+        const generate = document.getElementById("generatePdf");
+
+        if (btn && back) {
+          document.body.appendChild(back);
+
+          btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            back.style.display = "flex";
+          });
+
+          if (cancel) cancel.addEventListener("click", function () { back.style.display = "none"; });
+          back.addEventListener("click", function (e) { if (e.target === back) back.style.display = "none"; });
+
+          if (generate) {
+            generate.addEventListener("click", function () {
+              if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert("PDF library not ready. Check internet.");
+                return;
+              }
+              try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: "landscape" });
+                const checkboxes = back.querySelectorAll("input[type=checkbox]");
+                const cols = [], keys = [];
+                checkboxes.forEach(cb => {
+                  if (cb.checked) {
+                    cols.push(cb.parentNode.textContent.trim());
+                    keys.push(cb.value);
+                  }
+                });
+
+                if (!cols.length) { alert("Select at least one column."); return; }
+
+                const dataEvents = window.events || [];
+                const dataUsers = window.users || [];
+
+                const rows = dataEvents.map(r => {
+                  return keys.map(k => {
+                    if (k === "dates") return `${r.start_date || ""}\n${r.end_date || ""}`;
+                    if (k === "location") return `${r.city || ""}, ${r.country || ""}`;
+                    if (k === "organizer") return r.organizer || "";
+                    if (k === "event_status") return (r.event_status || "ONGOING").toUpperCase();
+                    if (k === "status") return (r.status || "pending").toUpperCase();
+                    if (k === "assigned") return r.final_staff_names || "—";
+                    if (k === "sent_by") {
+                      const u = dataUsers.find(x => x.id === r.sent_by_counsellor_id);
+                      return u ? u.full_name : "—";
+                    }
+                    if (k === "payment") return (r.payment_status || "UNPAID").toUpperCase();
+                    return "";
+                  });
+                });
+
+                doc.text("Event Report", 14, 15);
+                doc.setFontSize(10);
+                doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 20);
+                doc.autoTable({
+                  head: [cols],
+                  body: rows,
+                  startY: 25,
+                  styles: { fontSize: 8 },
+                  headStyles: { fillColor: [59, 130, 246] }
+                });
+                doc.save("report.pdf");
+                back.style.display = "none";
+              } catch (e) { alert("Gen Error: " + e.message); }
+            });
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        alert("PDF Script Error: " + e.message);
+      }
+    })();
+  </script>
+
+  <script src="/shared.js"></script>
+  <script src="/locations.js"></script>
+  <script src="/notifications.js"></script>
+  <script>
+    window.events = [];
+    window.users = [];
+    let events = window.events;
+    let users = window.users;
+    let currentEvent = null;
+    let selectedCounsellorIds = new Set();
+    let editingUser = null;
+
+    function updateStats() {
+      const total = events.length;
+      const pending = events.filter(e => e.status === 'pending').length;
+      const confirmed = events.filter(e => e.status === 'confirmed').length;
+      const activeCounsellors = users.filter(u => u.is_active).length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statConfirmed').textContent = confirmed;
+      document.getElementById('statCounsellors').textContent = activeCounsellors;
+    }
+
+    function openFinalize(row) {
+      currentEvent = row;
+      selectedCounsellorIds = new Set();
+      document.getElementById("modalMeta").textContent = `Event #${row.id} • ${fmtRange(row.start_date, row.end_date)} • ${row.city}, ${row.country}`;
+      document.getElementById("proposedBox").textContent = row.proposed_staffing || "—";
+      document.getElementById("modalMsg").textContent = "";
+      document.getElementById("modalMsg").className = "msg";
+      document.getElementById("modalBack").style.display = "flex";
+      loadAvailability(row);
+    }
+    function closeFinalize() { document.getElementById("modalBack").style.display = "none"; currentEvent = null; selectedCounsellorIds = new Set(); }
+
+    async function loadAvailability(row) {
+      const r = await api(`/api/counsellors/availability?start=${encodeURIComponent(row.start_date)}&end=${encodeURIComponent(row.end_date)}&exclude_submission_id=${row.id}`);
+      const data = await r.json();
+      if (!r.ok) { document.getElementById("modalMsg").className = "msg err"; document.getElementById("modalMsg").textContent = data.error || "Failed"; return; }
+      const list = document.getElementById("cList");
+      list.innerHTML = data.rows.map(c => {
+        const badge = c.available ? '<span class="badge avail">available</span>' : '<span class="badge busy">busy</span>';
+        const disabled = c.available ? "" : "disabled";
+        const conflictText = !c.available ? `<small style="color:var(--muted);">Conflicts: ${c.conflicts.map(x => `#${x.id} (${fmtRange(x.start_date, x.end_date)})`).join(", ")}</small>` : "";
+        return `
+        <div class="row">
+          <div class="checkbox">
+            <input type="checkbox" data-cid="${c.id}" ${disabled} ${selectedCounsellorIds.has(c.id) ? "checked" : ""}/>
+            <div>
+              <div><strong>${esc(c.full_name)}</strong> <small style="color:var(--muted);">(${esc(c.username)})</small></div>
+              ${conflictText}
+            </div>
+          </div>
+          ${badge}
+        </div>
+      `;
+      }).join("");
+      list.querySelectorAll("input[type=checkbox][data-cid]").forEach(cb => {
+        cb.addEventListener("change", () => {
+          const id = Number(cb.getAttribute("data-cid"));
+          if (cb.checked) selectedCounsellorIds.add(id); else selectedCounsellorIds.delete(id);
+        });
+      });
+    }
+
+    function openUserEdit(u) {
+      editingUser = u;
+      document.getElementById("userMeta").textContent = `${u.full_name} (${u.username})`;
+      document.getElementById("editName").value = u.full_name;
+      document.getElementById("editActive").value = String(u.is_active);
+      document.getElementById("editPass").value = "";
+      document.getElementById("userEditMsg").textContent = "";
+      document.getElementById("userBack").style.display = "flex";
+    }
+    function closeUserEdit() { document.getElementById("userBack").style.display = "none"; editingUser = null; }
+
+    // Store country suggestions for easy lookup
+    let countrySuggestions = [];
+
+    async function loadUsers() {
+      const r = await api("/api/counsellors");
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Failed");
+      window.users = data.rows || [];
+      users = window.users;
+
+      // Fetch country suggestions to show tags
+      try {
+        const csR = await api("/api/country-suggestions");
+        const csData = await csR.json();
+        countrySuggestions = csData.rows || [];
+      } catch (e) {
+        countrySuggestions = [];
+      }
+
+      // Group countries by counsellor
+      const counsellorCountries = {};
+      countrySuggestions.forEach(cs => {
+        if (!counsellorCountries[cs.counsellor_id]) counsellorCountries[cs.counsellor_id] = [];
+        counsellorCountries[cs.counsellor_id].push(cs.country);
+      });
+
+      const rows = users.map(u => {
+        const countries = counsellorCountries[u.id] || [];
+        const countryTags = countries.length > 0
+          ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${countries.slice(0, 3).map(c => `<span style="font-size:11px;background:linear-gradient(135deg, #f59e0b, #d97706);color:white;padding:3px 8px;border-radius:12px;font-weight:500;">🌍 ${esc(c)}</span>`).join('')}${countries.length > 3 ? `<span style="font-size:11px;background:var(--bg-tertiary);color:var(--text);padding:3px 8px;border-radius:12px;font-weight:500;">+${countries.length - 3} more</span>` : ''}</div>`
+          : '';
+        return `
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:12px;">
+           <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:600;">
+             ${esc(u.full_name.charAt(0).toUpperCase())}
+           </div>
+           <div>
+             <strong>${esc(u.full_name)}</strong> <small style="color:var(--muted);">(${esc(u.username)})</small><br>
+             ${u.is_active ? '<span class="badge ok">Active</span>' : '<span class="badge">Inactive</span>'}
+             ${countryTags}
+           </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+           <button class="btn tiny" onclick="window.onUserEditClick(${u.id})"><i data-lucide="edit-2" style="width:14px;height:14px;"></i> Edit</button>
+           <button class="btn tiny danger" data-del-user="${u.id}" type="button"><i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete</button>
+        </div>
+      </div>
+    `}).join("");
+
+      document.getElementById("userList").innerHTML = rows;
+      lucide.createIcons();
+
+      // Also load Country Coverage panel
+      loadCountryCoverage();
+
+      const cf = document.getElementById("f_counsellor");
+      const currentVal = cf.value;
+      cf.innerHTML = '<option value="">All Counsellors</option>' + users.map(u =>
+        `<option value="${u.id}">${esc(u.full_name)}</option>`
+      ).join("");
+      cf.value = currentVal;
+
+      try {
+        if (window.WORLD_LOCATIONS) {
+          const sel = document.getElementById("f_country");
+          sel.innerHTML = '<option value="">All Countries</option>' + window.WORLD_LOCATIONS.map(c =>
+            `<option value="${esc(c)}">${esc(c)}</option>`
+          ).join("");
+
+          // Populate Add Counsellor country checkboxes
+          const addUserCountryList = document.getElementById("addUserCountryList");
+          if (addUserCountryList && addUserCountryList.innerHTML === '') {
+            const allCountries = window.WORLD_LOCATIONS;
+            addUserCountryList.innerHTML = allCountries.map(country => `
+              <label class="checkbox" style="display:flex;gap:8px;padding:8px 12px;margin:0;border-bottom:1px solid var(--border);">
+                <input type="checkbox" name="addUserCountry" value="${esc(country)}" />
+                ${esc(country)}
+              </label>
+            `).join('');
+
+            // Add search handler
+            document.getElementById("addUserCountrySearch")?.addEventListener("input", (e) => {
+              const query = e.target.value.toLowerCase();
+              addUserCountryList.querySelectorAll("label").forEach(label => {
+                const country = label.querySelector("input").value.toLowerCase();
+                label.style.display = country.includes(query) ? '' : 'none';
+              });
+            });
+          }
+        }
+
+        const lr = await api("/api/filters/locations");
+        if (lr.ok) {
+          const ldata = await lr.json();
+          const fill = (id, arr) => {
+            const el = document.getElementById(id);
+            el.innerHTML = arr.map(x => `<option value="${esc(x)}"></option>`).join("");
+          };
+          fill("dl_city", ldata.cities || []);
+          fill("dl_organizer", ldata.organizers || []);
+        }
+      } catch (e) { console.error(e); }
+
+      updateStats();
+    }
+
+    async function loadEvents() {
+      const status = document.getElementById("f_status").value;
+      const counsellor = document.getElementById("f_counsellor").value;
+      const month = document.getElementById("f_month").value;
+      const city = document.getElementById("f_city").value.trim();
+      const country = document.getElementById("f_country").value.trim();
+      const organizer = document.getElementById("f_organizer").value.trim();
+
+      const actives = [];
+      if (status) actives.push(`Status: ${status}`);
+      if (counsellor) actives.push(`Counsellor ID: ${counsellor}`);
+      if (month) actives.push(`Month: ${month}`);
+      if (city) actives.push(`City: ${city}`);
+      if (country) actives.push(`Country: ${country}`);
+      if (organizer) actives.push(`Organizer: ${organizer}`);
+      document.getElementById("activeFilters").textContent = actives.length ? "Filtering by: " + actives.join(", ") : "Showing all events";
+
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      if (counsellor) params.set("counsellor_id", counsellor);
+      if (month) params.set("month", month);
+      if (city) params.set("city", city);
+      if (country) params.set("country", country);
+      if (organizer) params.set("organizer", organizer);
+      params.set("_t", Date.now());
+
+      const r = await api("/api/events?" + params.toString());
+      const data = await r.json();
+      if (!r.ok) {
+        alert(data.error || "Failed");
+        return;
+      }
+      window.events = data.rows || [];
+      events = window.events;
+      document.getElementById("count").textContent = events.length + " events";
+
+      document.querySelector("#tbl tbody").innerHTML = events.map(r => {
+        const dates = esc(fmtRange(r.start_date, r.end_date));
+        const location = esc(`${r.city || ""}, ${r.country || ""}`.replace(/^,\s*/, ""));
+        const orgName = esc(r.org_name || r.organizer || "—");
+        const evtName = esc(r.evt_name || "—");
+        const evtType = esc(r.evt_type || "—");
+        const statusBadge = (r.status === "confirmed")
+          ? `<span class="badge ok">✓ Confirmed</span>`
+          : (r.status === "not_applicable")
+            ? `<span class="badge na">— N/A</span>`
+            : `<span class="badge pending">⏳ Pending</span>`;
+        const assignedNames = esc(r.final_staff_names || "");
+        const btnLabel = (r.status === "confirmed") ? "Edit" : (r.status === "not_applicable") ? "—" : "Finalize";
+
+        const sentByVal = r.sent_by_counsellor_id || "";
+        const sentByOpts =
+          `<option value="">— None —</option>` +
+          users.map(u => `<option value="${u.id}" ${u.id == sentByVal ? "selected" : ""}>${esc(u.full_name)}</option>`).join("");
+
+        const pay = (r.payment_status || "UNPAID").toUpperCase();
+        const evtStatus = (r.event_status || "ONGOING").toUpperCase();
+        const remarksVal = esc(r.remarks || "");
+        const sentByName = r.sent_by_name || "";
+
+        let esClass = "";
+        if (evtStatus === "ONGOING") esClass = "es-ongoing";
+        if (evtStatus === "COMPLETED") esClass = "es-completed";
+        if (evtStatus === "CANCELLED") esClass = "es-cancelled";
+        if (evtStatus === "POSTPONED") esClass = "es-postponed";
+
+        // Count assigned staff
+        const staffCount = r.final_staff_names ? r.final_staff_names.split('\n').filter(n => n.trim()).length : 0;
+        const staffNames = r.final_staff_names ? r.final_staff_names.split('\n').filter(n => n.trim()) : [];
+        // Show all staff names (extract just the name before the parenthesis)
+        const staffPreview = staffNames.map(n => n.split('(')[0].trim()).join(', ');
+
+        // Remarks count
+        const hasRemarks = r.remarks && r.remarks.trim().length > 0;
+
+        // Calculate submission time (MYT)
+        let subTime = "";
+        if (r.created_at) {
+          try {
+            subTime = new Date(r.created_at + "Z").toLocaleTimeString("en-GB", {
+              timeZone: "Asia/Kuala_Lumpur",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false
+            });
+          } catch (e) { }
+        }
+
+        return `
+      <tr data-event-id="${r.id}">
+        <td>
+          <strong>${dates}</strong>
+          ${subTime ? `<div style="font-size:11px;color:var(--primary);margin-top:2px;">Submitted: ${subTime}</div>` : ''}
+          <small style="color:var(--muted);">ID ${esc(r.id)} • ${esc(r.submitted_by)}</small>
+        </td>
+        <td>${location}</td>
+        <td><span title="${orgName} | ${evtName} | ${evtType}">${orgName}</span></td>
+        <td>
+          <span class="badge ${esClass}" style="cursor:default;">${evtStatus}</span>
+        </td>
+        <td class="col-staffing">
+          <div class="staffing-summary">
+            ${statusBadge}
+            <span class="staff-count ${staffCount > 0 ? '' : 'muted'}">${staffCount > 0 ? staffPreview : 'Not assigned'}</span>
+          </div>
+        </td>
+        <td class="col-pay">
+          <span class="badge ${pay === 'PAID' ? 'ok' : pay === 'FREE' ? 'blue' : 'pending'}">${pay}</span>
+        </td>
+        <td class="actions-cell">
+          <button class="btn small primary" onclick="window.onManageClick(${r.id})" type="button">
+            <i data-lucide="settings-2" style="width:14px;height:14px;"></i> Manage
+          </button>
+        </td>
+      </tr>`;
+      }).join("");
+
+      lucide.createIcons(); // Render Lucide icons in dynamically added rows
+      attachRowListeners();
+      updateStats();
+    }
+
+    // Search functionality
+    document.getElementById('searchEvents').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll('#tbl tbody tr');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+
+    function attachRowListeners() {
+      document.querySelectorAll(".sentby-select").forEach(sel => {
+        sel.addEventListener("change", async (e) => {
+          const id = Number(sel.getAttribute("data-subid"));
+          const val = sel.value;
+          sel.disabled = true;
+          const r = await api(`/api/submissions/${id}/meta`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sent_by_counsellor_id: val === "" ? null : Number(val) })
+          });
+          sel.disabled = false;
+          if (!r.ok) {
+            const data = await r.json();
+            alert(data.error || "Failed");
+          }
+        });
+      });
+
+      document.querySelectorAll(".pay-select").forEach(sel => {
+        sel.addEventListener("change", async (e) => {
+          const id = Number(sel.getAttribute("data-payid"));
+          const val = sel.value;
+          sel.disabled = true;
+          const r = await api(`/api/submissions/${id}/meta`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payment_status: val })
+          });
+          sel.disabled = false;
+          if (!r.ok) {
+            const data = await r.json();
+            alert(data.error || "Failed to update payment status");
+          }
+        });
+      });
+
+      document.querySelectorAll(".estatus-select").forEach(sel => {
+        sel.addEventListener("change", async (e) => {
+          const id = Number(sel.getAttribute("data-eid"));
+          const val = sel.value;
+
+          sel.className = "estatus-select table-select";
+          if (val === "ONGOING") sel.classList.add("es-ongoing");
+          if (val === "CANCELLED") sel.classList.add("es-cancelled");
+          if (val === "POSTPONED") sel.classList.add("es-postponed");
+
+          sel.disabled = true;
+          const r = await api(`/api/submissions/${id}/meta`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event_status: val })
+          });
+          sel.disabled = false;
+
+          if (!r.ok) {
+            const data = await r.json();
+            alert(data.error || "Failed to update status");
+          } else {
+            // Reload events to reflect status changes (e.g., Not Applicable)
+            await loadEvents();
+          }
+        });
+      });
+
+      // Remarks textarea update handler is now in modal - removed inline handler
+
+      document.querySelectorAll("[data-del]").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const id = btn.dataset.del;
+          if (!id) return;
+          if (!confirm("Delete this submission? This cannot be undone.")) return;
+          const r = await api(`/api/submissions/${id}`, { method: "DELETE" });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) return alert(data.error || "Delete failed.");
+          await loadEvents();
+        });
+      });
+    }
+
+    let hideSensitive = false;
+    document.getElementById("toggleCols").addEventListener("click", () => {
+      hideSensitive = !hideSensitive;
+      document.getElementById("tbl").classList.toggle("hide-sensitive", hideSensitive);
+      document.getElementById("toggleCols").innerHTML = hideSensitive
+        ? '<i data-lucide="eye"></i> Show Info'
+        : '<i data-lucide="eye-off"></i> Hide Info';
+      lucide.createIcons();
+    });
+
+    let hideStaffing = false;
+    document.getElementById("toggleStaffing").addEventListener("click", () => {
+      hideStaffing = !hideStaffing;
+      document.getElementById("tbl").classList.toggle("hide-staffing", hideStaffing);
+      document.getElementById("toggleStaffing").innerHTML = hideStaffing
+        ? '<i data-lucide="users-round"></i> Show Staffing'
+        : '<i data-lucide="users-round"></i> Hide Staffing';
+      lucide.createIcons();
+    });
+
+    (async () => {
+      try {
+        const user = await requireRole(["admin"]);
+        if (!user) { document.getElementById("needLogin").style.display = "block"; return; }
+        document.getElementById("who").textContent = user.username + " • admin";
+        await loadUsers();
+        await loadEvents();
+      } catch (e) {
+        console.error(e);
+        alert("Startup Error: " + e.message);
+      }
+    })();
+
+    window.onFinalizeClick = function (id) {
+      const evt = window.events.find(x => x.id === id);
+      if (evt) openFinalize(evt);
+      else alert("Event not found (ID " + id + ")");
+    };
+
+    // =========================================
+    // MANAGE DRAWER MODAL
+    // =========================================
+    let currentManageEvent = null;
+
+    // Open Manage Drawer
+    window.onManageClick = function (id, initialTab = 'staffing') {
+      const evt = window.events.find(x => x.id === id);
+      if (!evt) { alert("Event not found (ID " + id + ")"); return; }
+      currentManageEvent = evt;
+
+      // Update header
+      document.getElementById("manageMeta").textContent =
+        `Event #${evt.id} • ${fmtRange(evt.start_date, evt.end_date)} • ${evt.city}, ${evt.country}`;
+
+      // Check event status and show appropriate notices
+      const eventStatus = (evt.event_status || "ONGOING").toUpperCase();
+      const isCancelled = eventStatus === "CANCELLED";
+      const isPostponed = eventStatus === "POSTPONED";
+      const isCompleted = eventStatus === "COMPLETED";
+      const isLocked = isCancelled || isCompleted;
+
+      // Show/hide notices
+      document.getElementById("cancelledNotice").style.display = isCancelled ? "flex" : "none";
+      document.getElementById("postponedNotice").style.display = isPostponed ? "flex" : "none";
+
+      // Show completed notice (reuse cancelled notice structure or create new)
+      const completedNotice = document.getElementById("completedNotice");
+      if (completedNotice) completedNotice.style.display = isCompleted ? "flex" : "none";
+
+      // Lock/unlock form fields based on cancelled/completed status
+      // For completed, lock staffing but keep payment/remarks editable
+      document.getElementById("drawer-staffing").classList.toggle('locked', isLocked);
+      document.getElementById("drawer-event").classList.toggle('locked', isLocked);
+      // Payment and Remarks tabs stay unlocked for completed events
+      document.getElementById("drawer-payment").classList.toggle('locked', isCancelled);
+      document.getElementById("drawer-remarks").classList.toggle('locked', isCancelled);
+      document.querySelector('.drawer-footer').classList.toggle('locked', isCancelled);
+
+      // Explicitly disable/enable staffing inputs and button
+      const staffingInputs = document.querySelectorAll('#drawer-staffing input, #drawer-staffing button');
+      staffingInputs.forEach(el => el.disabled = isLocked);
+
+      // Ensure the "Update" button in the footer (which saves everything) respects the lock
+      // But wait... the "saveAllChanges" button is in the footer, which is NOT locked for completed events (only cancelled).
+      // So we need to handle the "saveAllChanges" click handler logic too (it already has some checks, we will strengthen them).
+      // For visual feedback, we can disable the specific checkboxes in the staffing list.
+
+      // Populate tabs
+      populateStaffingTab(evt);
+      populatePaymentTab(evt);
+      document.getElementById("manageRemarks").value = evt.remarks || "";
+      populateEventTab(evt);
+
+      // Switch to initial tab
+      switchDrawerTab(initialTab);
+
+      // Open drawer
+      document.getElementById("manageBack").classList.add("open");
+      lucide.createIcons();
+
+      // If postponed, show the date picker modal immediately
+      if (isPostponed) {
+        setTimeout(() => openPostponedDatesModal(evt), 300);
+      }
+    };
+
+    function populateStaffingTab(evt) {
+      // Status badge
+      const statusBadge = (evt.status === "confirmed")
+        ? `<span class="badge ok">✓ Confirmed</span>`
+        : (evt.status === "not_applicable")
+          ? `<span class="badge na">— N/A</span>`
+          : `<span class="badge pending">⏳ Pending Review</span>`;
+      document.getElementById("manageStaffingStatus").innerHTML = statusBadge;
+
+      const eventStatus = (evt.event_status || "ONGOING").toUpperCase();
+      const isLocked = eventStatus === "COMPLETED" || eventStatus === "CANCELLED";
+
+      // Counsellor list (reuse existing logic from openFinalize)
+      // Pass isLocked to render disabled inputs
+      loadCounsellorListForDrawer(evt, isLocked);
+
+      // Show locked message
+      const lockedMsg = document.getElementById("staffingLockedMsg");
+      if (isLocked) {
+        if (!lockedMsg) {
+          const msg = document.createElement("div");
+          msg.id = "staffingLockedMsg";
+          msg.style.cssText = "background:#fee2e2;color:#b91c1c;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:6px;";
+          msg.innerHTML = '<i data-lucide="lock" style="width:14px;height:14px"></i> <strong>Staffing Locked:</strong> This event is completed/cancelled.';
+          const list = document.getElementById("manageCounsellorList");
+          list.parentNode.insertBefore(msg, list);
+        } else {
+          lockedMsg.style.display = "flex";
+        }
+      } else {
+        if (lockedMsg) lockedMsg.style.display = "none";
+      }
+
+      // Proposed staff
+      const proposed = evt.proposed_staffing || "—";
+      document.getElementById("manageProposed").textContent = proposed;
+
+      // Show/Hide Select Proposed button
+      const btn = document.getElementById("selectProposedBtn");
+      if (proposed && proposed !== "—" && !isLocked) {
+        btn.style.display = "inline-flex";
+        btn.onclick = () => {
+          const checks = document.querySelectorAll('input[name="staffDrawer"]');
+          const pText = proposed.toLowerCase();
+          let count = 0;
+          checks.forEach(chk => {
+            const uid = Number(chk.value);
+            const u = users.find(x => x.id === uid);
+            if (u) {
+              // Check if name or username is in the proposed text
+              if (pText.includes(u.full_name.toLowerCase()) || pText.includes(u.username.toLowerCase())) {
+                chk.checked = true;
+                count++;
+              }
+            }
+          });
+          if (count > 0) alert(`Selected ${count} matches found in the proposed list.`);
+          else alert("No direct name matches found in the active list.");
+        };
+      } else {
+        btn.style.display = "none";
+      }
+    }
+
+    async function loadCounsellorListForDrawer(evt, isLocked = false) {
+      const listEl = document.getElementById("manageCounsellorList");
+      listEl.innerHTML = "<p>Loading counsellors...</p>";
+
+      try {
+        // API returns { ok: true, rows: [ { id, username, full_name, status, available_ranges, conflicts: [...] }, ... ] }
+        const avail = await api(`/api/counsellors/availability?start=${evt.start_date}&end=${evt.end_date}&exclude_submission_id=${evt.id}`).then(r => r.json());
+
+        // Build map of statuses
+        const statusMap = new Map();
+        (avail.rows || []).forEach(r => {
+          statusMap.set(r.id, {
+            status: r.status || (r.available ? 'available' : 'busy'),
+            ranges: r.available_ranges || ""
+          });
+        });
+
+        const finalIds = (evt.final_assignments || "").split(",").map(x => Number(x.trim())).filter(Boolean);
+
+        // Fetch country suggestions if event has a country
+        let suggestedIds = new Set();
+        if (evt.country) {
+          try {
+            const suggestR = await api(`/api/country-suggestions/${encodeURIComponent(evt.country)}`);
+            const suggestData = await suggestR.json();
+            if (suggestR.ok && suggestData.rows) {
+              suggestedIds = new Set(suggestData.rows.map(r => r.counsellor_id));
+            }
+          } catch (e) {
+            console.warn('Failed to load country suggestions:', e);
+          }
+        }
+
+        // Sort users: suggested first, then by availability (Available > Partial > Busy)
+        const sortedUsers = [...users].filter(u => u.is_active).sort((a, b) => {
+          const aIsSuggested = suggestedIds.has(a.id) ? 0 : 1;
+          const bIsSuggested = suggestedIds.has(b.id) ? 0 : 1;
+          if (aIsSuggested !== bIsSuggested) return aIsSuggested - bIsSuggested;
+
+          // Within same group, sort by status score
+          const getScore = (uid) => {
+            const s = statusMap.get(uid)?.status || 'available';
+            if (s === 'available') return 0;
+            if (s === 'partially_available') return 1;
+            return 2;
+          };
+          return getScore(a.id) - getScore(b.id);
+        });
+
+        listEl.innerHTML = sortedUsers
+          .map(u => {
+            const st = statusMap.get(u.id);
+            const status = st?.status || 'available';
+            const ranges = st?.ranges || "";
+            const checked = finalIds.includes(u.id);
+            const isSuggested = suggestedIds.has(u.id);
+            const isBusy = status === 'busy';
+
+            let icon = "🟢";
+            let extra = "";
+            let rowClass = "";
+
+            if (status === 'busy') {
+              icon = "🔴";
+              rowClass = "busy";
+              extra = '<span class="busy-hint">(Busy - overlapping event)</span>';
+            } else if (status === 'partially_available') {
+              icon = "🟠";
+              // Display available ranges
+              extra = `<span class="busy-hint" style="color:#d97706;font-weight:500;">(Available: ${esc(ranges)})</span>`;
+            }
+
+            return `<label class="checkbox ${rowClass}" style="${isSuggested ? 'background:linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);border-left:4px solid #f59e0b;padding-left:10px;margin-left:-10px;border-radius:6px;' : ''} ${isLocked ? 'locked' : ''}">
+              <input type="checkbox" name="staffDrawer" value="${u.id}" ${checked ? "checked" : ""} ${isLocked ? "disabled" : ""}>
+              ${icon} ${esc(u.full_name)}
+              ${isSuggested ? '<span style="font-size:10px;margin-left:8px;background:linear-gradient(135deg, #f59e0b, #d97706);color:white;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">★ Recommended</span>' : ''}
+              ${extra}
+            </label>`;
+          }).join("") || "<p>No counsellors available.</p>";
+        lucide.createIcons();
+      } catch (e) {
+        listEl.innerHTML = "<p>Error loading counsellors.</p>";
+        console.error("Error loading counsellors:", e);
+      }
+    }
+
+    function populatePaymentTab(evt) {
+      // Sent By dropdown
+      const sentBySelect = document.getElementById("manageSentBy");
+      sentBySelect.innerHTML = '<option value="">— None —</option>' +
+        users.map(u => `<option value="${u.id}" ${u.id == evt.sent_by_counsellor_id ? 'selected' : ''}>${esc(u.full_name)}</option>`).join('');
+
+      // Payment status radio
+      const pay = (evt.payment_status || "UNPAID").toUpperCase();
+      document.querySelectorAll('input[name="paymentOpt"]').forEach(radio => {
+        radio.checked = radio.value === pay;
+      });
+    }
+
+    function populateEventTab(evt) {
+      // Convert created_at to Malaysian time (UTC+8) in 24-hour format
+      let timeSubmitted = "—";
+      if (evt.created_at) {
+        const utcDate = new Date(evt.created_at + "Z"); // Treat as UTC
+        timeSubmitted = utcDate.toLocaleString("en-GB", {
+          timeZone: "Asia/Kuala_Lumpur",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        });
+      }
+
+      // Event info grid
+      document.getElementById("manageEventInfo").innerHTML = `
+        <dt>Organizer</dt><dd>${esc(evt.org_name || evt.organizer || "—")}</dd>
+        <dt>Event Name</dt><dd>${esc(evt.evt_name || "—")}</dd>
+        <dt>Event Type</dt><dd>${esc(evt.evt_type || "—")}</dd>
+        <dt>Location</dt><dd>${esc(evt.city)}, ${esc(evt.country)}</dd>
+        <dt>Dates</dt><dd>${fmtRange(evt.start_date, evt.end_date)}</dd>
+        <dt>Submitted by</dt><dd>${esc(evt.submitted_by)}</dd>
+        <dt>Time Submitted</dt><dd>${timeSubmitted} <small style="color:var(--muted);">(MYT)</small></dd>
+      `;
+
+      // Event status
+      document.getElementById("manageEventStatus").value = (evt.event_status || "ONGOING").toUpperCase();
+    }
+
+    // Tab Switching
+    function switchDrawerTab(tabName) {
+      document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.drawer-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`[data-drawer-tab="${tabName}"]`)?.classList.add('active');
+      document.getElementById(`drawer-${tabName}`)?.classList.add('active');
+    }
+
+    document.querySelectorAll('.drawer-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchDrawerTab(tab.dataset.drawerTab));
+    });
+
+    // Close Drawer
+    function closeManageDrawer() {
+      document.getElementById("manageBack").classList.remove("open");
+      currentManageEvent = null;
+    }
+
+    document.getElementById("closeManage").addEventListener("click", closeManageDrawer);
+    document.getElementById("manageBack").addEventListener("click", (e) => {
+      if (e.target.id === "manageBack") closeManageDrawer();
+    });
+
+    // Unified Save All Changes
+    document.getElementById("saveAllChanges").addEventListener("click", async () => {
+      const m = document.getElementById("drawerMsg");
+
+      // Check if event is already cancelled - prevent saving
+      const currentStatus = (currentManageEvent.event_status || "ONGOING").toUpperCase();
+      if (currentStatus === "CANCELLED") {
+        m.className = "msg err";
+        m.textContent = "Cannot modify a cancelled event.";
+        return;
+      }
+
+      // Get the new status being set
+      const newEventStatus = document.getElementById("manageEventStatus").value.toUpperCase();
+
+      // Confirmation for cancellation
+      if (newEventStatus === "CANCELLED" && currentStatus !== "CANCELLED") {
+        const confirmed = confirm(
+          "⚠️ CANCELLING EVENT\n\n" +
+          "Once cancelled, this event CANNOT be edited again.\n" +
+          "All staffing assignments will be cleared.\n\n" +
+          "Are you sure you want to cancel this event?"
+        );
+        if (!confirmed) return;
+      }
+
+      m.textContent = "Saving..."; m.className = "msg";
+
+      try {
+        const checks = document.querySelectorAll('input[name="staffDrawer"]:checked');
+        const staffIds = Array.from(checks).map(c => Number(c.value));
+        const isPostponed = newEventStatus === "POSTPONED" || currentStatus === "POSTPONED";
+        const isCancellingOrPostponing = newEventStatus === "CANCELLED" || newEventStatus === "POSTPONED";
+
+        // Only require staffing if NOT postponed/cancelled and we have an ongoing event
+        if (!isPostponed && !isCancellingOrPostponing && staffIds.length === 0) {
+          throw new Error("At least 1 counsellor must be selected for ongoing events.");
+        }
+
+        // 1. Save Staffing (finalize) - skip if cancelling/postponing (API will clear it anyway)
+        // Also skip if CONFIRMED/COMPLETED - wait, confirmed events CAN be updated staffing-wise unless completed.
+        // So skip if COMPLETED.
+        if (!isCancellingOrPostponing && staffIds.length > 0 && currentStatus !== "COMPLETED") {
+          const staffRes = await api(`/api/submissions/${currentManageEvent.id}/finalize`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ counsellor_ids: staffIds })
+          });
+          if (!staffRes.ok) {
+            const d = await staffRes.json();
+            throw new Error(d.error || "Failed to save staffing");
+          }
+        }
+
+        // 2. Save Payment + Remarks + Event Status (in one meta call)
+        const sentBy = document.getElementById("manageSentBy").value;
+        const paymentRadio = document.querySelector('input[name="paymentOpt"]:checked');
+        const payment = paymentRadio ? paymentRadio.value : currentManageEvent.payment_status || "UNPAID";
+        const remarks = document.getElementById("manageRemarks").value;
+
+        const metaRes = await api(`/api/submissions/${currentManageEvent.id}/meta`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sent_by_counsellor_id: sentBy === "" ? null : Number(sentBy),
+            payment_status: payment,
+            remarks: remarks,
+            event_status: newEventStatus
+          })
+        });
+        if (!metaRes.ok) {
+          const d = await metaRes.json();
+          throw new Error(d.error || "Failed to save event details");
+        }
+
+        m.className = "msg ok"; m.textContent = "Saved!";
+        await loadEvents();
+
+        // Close drawer after short delay
+        setTimeout(closeManageDrawer, 400);
+
+      } catch (e) {
+        m.className = "msg err"; m.textContent = e.message || "Update failed";
+      }
+    });
+
+    // Delete Event
+    document.getElementById("deleteEventBtn").addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to permanently delete this event? This action cannot be undone.")) return;
+
+      const r = await api(`/api/submissions/${currentManageEvent.id}`, { method: "DELETE" });
+      if (r.ok) {
+        closeManageDrawer();
+        await loadEvents();
+      } else {
+        const data = await r.json();
+        alert(data.error || "Failed to delete");
+      }
+    });
+
+    // =========================================
+    // POSTPONED DATE MODAL
+    // =========================================
+    function openPostponedDatesModal(evt) {
+      document.getElementById("postponedDatesMeta").textContent =
+        `Reschedule Event #${evt.id} • ${evt.city}, ${evt.country}`;
+
+      // Set current dates as defaults
+      document.getElementById("newStartDate").value = evt.start_date || "";
+      document.getElementById("newEndDate").value = evt.end_date || "";
+      document.getElementById("postponedDatesMsg").textContent = "";
+
+      document.getElementById("postponedDatesBack").classList.add("open");
+      lucide.createIcons();
+    }
+
+    function closePostponedDatesModal() {
+      document.getElementById("postponedDatesBack").classList.remove("open");
+    }
+
+    // Set New Dates button in postponed notice
+    document.getElementById("setNewDatesBtn").addEventListener("click", () => {
+      if (currentManageEvent) openPostponedDatesModal(currentManageEvent);
+    });
+
+    // Cancel button
+    document.getElementById("cancelNewDates").addEventListener("click", closePostponedDatesModal);
+
+    // Click outside to close
+    document.getElementById("postponedDatesBack").addEventListener("click", (e) => {
+      if (e.target.id === "postponedDatesBack") closePostponedDatesModal();
+    });
+
+    // Confirm New Dates button
+    document.getElementById("confirmNewDates").addEventListener("click", async () => {
+      const m = document.getElementById("postponedDatesMsg");
+
+      // Check if we have a valid event
+      if (!currentManageEvent || !currentManageEvent.id) {
+        m.className = "msg err";
+        m.textContent = "Error: No event selected. Please close and try again.";
+        return;
+      }
+
+      const startDate = document.getElementById("newStartDate").value;
+      const endDate = document.getElementById("newEndDate").value;
+
+      if (!startDate || !endDate) {
+        m.className = "msg err";
+        m.textContent = "Please enter both start and end dates.";
+        return;
+      }
+
+      if (startDate > endDate) {
+        m.className = "msg err";
+        m.textContent = "End date must be after start date.";
+        return;
+      }
+
+      m.textContent = "Updating dates..."; m.className = "msg";
+
+      try {
+        // Update event dates via API
+        const r = await api(`/api/submissions/${currentManageEvent.id}/reschedule`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ start_date: startDate, end_date: endDate })
+        });
+
+        if (!r.ok) {
+          const d = await r.json();
+          throw new Error(d.error || "Failed to update dates");
+        }
+
+        m.className = "msg ok";
+        m.textContent = "Dates updated!";
+
+        // Reload events and update drawer
+        await loadEvents();
+        const updatedEvt = window.events.find(x => x.id === currentManageEvent.id);
+        if (updatedEvt) {
+          currentManageEvent = updatedEvt;
+          document.getElementById("manageMeta").textContent =
+            `Event #${updatedEvt.id} • ${fmtRange(updatedEvt.start_date, updatedEvt.end_date)} • ${updatedEvt.city}, ${updatedEvt.country}`;
+          populateEventTab(updatedEvt);
+          loadCounsellorListForDrawer(updatedEvt);
+        }
+
+        setTimeout(closePostponedDatesModal, 400);
+      } catch (e) {
+        m.className = "msg err";
+        m.textContent = e.message || "Failed to update dates";
+      }
+    });
+
+    // Keep old handlers for backward compatibility (but they won't be used)
+    window.onRemarksClick = function (id) { window.onManageClick(id, 'remarks'); };
+    window.onPaymentClick = function (id) { window.onManageClick(id, 'payment'); };
+
+    window.onUserEditClick = function (id) {
+      try {
+        const u = window.users.find(x => x.id === id);
+        if (!u) {
+          alert("Debug: User ID " + id + " not found in window.users. (Count: " + window.users.length + ")");
+          return;
+        }
+        openUserEdit(u);
+      } catch (e) { alert("Error: " + e.message); }
+    };
+
+    document.getElementById("userList").addEventListener("click", async (e) => {
+      const editBtn = e.target.closest("[data-edit]");
+      if (editBtn) {
+        try {
+          const id = Number(editBtn.getAttribute("data-edit"));
+          const u = window.users.find(x => x.id === id);
+          if (!u) throw new Error("User not found via delegation (ID " + id + ")");
+          openUserEdit(u);
+        } catch (err) { alert("Edit Error: " + err.message); }
+        return;
+      }
+
+      const delBtn = e.target.closest("[data-del-user]");
+      if (delBtn) {
+        const id = delBtn.getAttribute("data-del-user");
+        if (!confirm("Permanently delete this counsellor? Assignments will be removed.")) return;
+        const r = await api(`/api/counsellors/${id}`, { method: "DELETE" });
+        if (r.ok) { await loadUsers(); }
+        else { const d = await r.json(); alert(d.error || "Failed"); }
+      }
+    });
+
+    document.getElementById("logout").addEventListener("click", () => { clearToken(); location.href = "/login.html"; });
+    document.getElementById("refreshUsers").addEventListener("click", loadUsers);
+    document.getElementById("refreshEvents").addEventListener("click", loadEvents);
+    document.getElementById("applyFilters").addEventListener("click", loadEvents);
+
+    ["f_status", "f_counsellor", "f_month", "f_city", "f_country", "f_organizer"].forEach(id => {
+      document.getElementById(id).addEventListener("change", loadEvents);
+    });
+
+    document.getElementById("addUserForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const m = document.getElementById("userMsg");
+      m.textContent = ""; m.className = "msg";
+      const fd = new FormData(e.target);
+      const body = {
+        full_name: fd.get("full_name"),
+        username: fd.get("username"),
+        password: fd.get("password"),
+        is_active: Number(fd.get("is_active")) === 1
+      };
+      const r = await api("/api/counsellors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!r.ok) { m.className = "msg err"; m.textContent = data.error || "Failed"; return; }
+
+      // Save country assignments if any selected
+      const countryCheckboxes = document.querySelectorAll("#addUserCountryList input[name='addUserCountry']:checked");
+      const selectedCountries = Array.from(countryCheckboxes).map(cb => cb.value);
+      const counsellorId = data.id;
+
+      if (counsellorId && selectedCountries.length > 0) {
+        for (const country of selectedCountries) {
+          try {
+            await api("/api/country-suggestions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ country, counsellor_id: counsellorId })
+            });
+          } catch (e) {
+            console.warn("Failed to assign country:", country, e);
+          }
+        }
+      }
+
+      m.className = "msg ok"; m.textContent = "Added.";
+      e.target.reset();
+      // Clear country checkboxes and search
+      document.querySelectorAll("#addUserCountryList input[name='addUserCountry']").forEach(cb => cb.checked = false);
+      document.getElementById("addUserCountrySearch").value = "";
+      document.querySelectorAll("#addUserCountryList label").forEach(label => label.style.display = '');
+      countrySuggestions = []; // Reset cache
+      await loadUsers();
+    });
+
+    document.getElementById("cancelFinalize").addEventListener("click", closeFinalize);
+    document.getElementById("modalBack").addEventListener("click", (e) => { if (e.target.id === "modalBack") closeFinalize(); });
+    document.getElementById("saveFinalize").addEventListener("click", async () => {
+      const m = document.getElementById("modalMsg");
+      m.textContent = ""; m.className = "msg";
+      const r = await api(`/api/submissions/${currentEvent.id}/finalize`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ counsellor_ids: Array.from(selectedCounsellorIds) })
+      });
+      const data = await r.json();
+      if (!r.ok) { m.className = "msg err"; m.textContent = data.error || "Failed"; return; }
+      m.className = "msg ok"; m.textContent = "Confirmed.";
+      await loadEvents();
+      setTimeout(closeFinalize, 450);
+    });
+
+    document.getElementById("cancelUser").addEventListener("click", closeUserEdit);
+    document.getElementById("userBack").addEventListener("click", (e) => { if (e.target.id === "userBack") closeUserEdit(); });
+    document.getElementById("saveUser").addEventListener("click", async () => {
+      const m = document.getElementById("userEditMsg");
+      m.textContent = ""; m.className = "msg";
+      const body = {
+        full_name: document.getElementById("editName").value,
+        is_active: Number(document.getElementById("editActive").value),
+        password: document.getElementById("editPass").value
+      };
+      const r = await api(`/api/counsellors/${editingUser.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!r.ok) { m.className = "msg err"; m.textContent = data.error || "Failed"; return; }
+      m.className = "msg ok"; m.textContent = "Saved.";
+      await loadUsers();
+      setTimeout(closeUserEdit, 350);
+    });
+
+    document.getElementById("csvBtn").addEventListener("click", async () => {
+      const r = await api("/api/report.csv");
+      if (!r.ok) { alert("CSV download failed"); return; }
+      const blob = await r.blob();
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = u; a.download = "report.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(u);
+    });
+  </script>
+
+  <!-- STATISTICS CHARTS -->
+  <script>
+    // Chart instances (for cleanup on re-render)
+    let chartMonthly = null;
+    let chartCountry = null;
+    let chartCounsellors = null;
+    let chartPayment = null;
+    let chartStatus = null;
+    let statisticsLoaded = false;
+
+    // Color palette for charts
+    const chartColors = {
+      primary: 'rgba(59, 130, 246, 0.8)',
+      primaryLight: 'rgba(59, 130, 246, 0.2)',
+      success: 'rgba(34, 197, 94, 0.8)',
+      warning: 'rgba(234, 179, 8, 0.8)',
+      danger: 'rgba(239, 68, 68, 0.8)',
+      purple: 'rgba(139, 92, 246, 0.8)',
+      gray: 'rgba(100, 116, 139, 0.8)',
+      palette: [
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(34, 197, 94, 0.8)',
+        'rgba(234, 179, 8, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(139, 92, 246, 0.8)',
+        'rgba(6, 182, 212, 0.8)',
+        'rgba(249, 115, 22, 0.8)',
+        'rgba(236, 72, 153, 0.8)',
+        'rgba(20, 184, 166, 0.8)',
+        'rgba(99, 102, 241, 0.8)'
+      ]
+    };
+
+    async function loadAndRenderStatistics() {
+      console.log('loadAndRenderStatistics called');
+
+      // Check if Chart.js is loaded
+      if (typeof Chart === 'undefined') {
+        console.error('Chart.js not loaded!');
+        document.getElementById('statsTotal').textContent = 'Error';
+        return;
+      }
+
+      // Fetch events using the existing api() helper
+      let events = [];
+      try {
+        const response = await api('/api/events');
+        if (response.ok) {
+          const data = await response.json();
+          events = data.rows || [];
+          console.log('Fetched events:', events.length);
+        } else {
+          console.error('Failed to fetch events:', response.status);
+        }
+      } catch (e) {
+        console.error('Error fetching events:', e);
+      }
+
+      if (!events.length) {
+        console.log('No events to render');
+        document.getElementById('statsTotal').textContent = '0';
+        document.getElementById('statsConfirmRate').textContent = '0%';
+        document.getElementById('statsCountries').textContent = '0';
+        document.getElementById('statsPaidRate').textContent = '0%';
+        return;
+      }
+
+      // Calculate summary stats
+      const total = events.length;
+      const confirmed = events.filter(e => e.status === 'confirmed').length;
+      const confirmRate = total > 0 ? Math.round((confirmed / total) * 100) : 0;
+      const countries = [...new Set(events.map(e => e.country))].length;
+      const paid = events.filter(e => (e.payment_status || '').toUpperCase() === 'PAID').length;
+      const paidRate = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+      document.getElementById('statsTotal').textContent = total;
+      document.getElementById('statsConfirmRate').textContent = confirmRate + '%';
+      document.getElementById('statsCountries').textContent = countries;
+      document.getElementById('statsPaidRate').textContent = paidRate + '%';
+
+      // Destroy existing charts before re-creating
+      if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+      if (chartCountry) { chartCountry.destroy(); chartCountry = null; }
+      if (chartCounsellors) { chartCounsellors.destroy(); chartCounsellors = null; }
+      if (chartPayment) { chartPayment.destroy(); chartPayment = null; }
+      if (chartStatus) { chartStatus.destroy(); chartStatus = null; }
+
+      // 1. Events by Month (Bar Chart)
+      const monthData = {};
+      events.forEach(e => {
+        if (e.start_date) {
+          const month = e.start_date.substring(0, 7);
+          monthData[month] = (monthData[month] || 0) + 1;
+        }
+      });
+      const sortedMonths = Object.keys(monthData).sort();
+      const monthLabels = sortedMonths.map(m => {
+        const [year, mon] = m.split('-');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return monthNames[parseInt(mon) - 1] + ' ' + year;
+      });
+
+      const ctx1 = document.getElementById('chartMonthly');
+      if (ctx1 && sortedMonths.length > 0) {
+        chartMonthly = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: monthLabels,
+            datasets: [{
+              label: 'Events',
+              data: sortedMonths.map(m => monthData[m]),
+              backgroundColor: chartColors.primary,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+      }
+
+      // 2. Events by Country (Horizontal Bar)
+      const countryData = {};
+      events.forEach(e => {
+        if (e.country) {
+          countryData[e.country] = (countryData[e.country] || 0) + 1;
+        }
+      });
+      const sortedCountries = Object.entries(countryData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      const ctx2 = document.getElementById('chartCountry');
+      if (ctx2 && sortedCountries.length > 0) {
+        chartCountry = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: sortedCountries.map(c => c[0]),
+            datasets: [{
+              label: 'Events',
+              data: sortedCountries.map(c => c[1]),
+              backgroundColor: chartColors.palette.slice(0, sortedCountries.length),
+              borderRadius: 6
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+      }
+
+      // 3. Counsellor Leaderboard (Bar Chart)
+      const counsellorData = {};
+      events.forEach(e => {
+        if (e.final_staff_names) {
+          e.final_staff_names.split('\n').forEach(name => {
+            const cleanName = name.split('(')[0].trim();
+            if (cleanName) {
+              counsellorData[cleanName] = (counsellorData[cleanName] || 0) + 1;
+            }
+          });
+        }
+      });
+      const sortedCounsellors = Object.entries(counsellorData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      const ctx3 = document.getElementById('chartCounsellors');
+      if (ctx3 && sortedCounsellors.length > 0) {
+        chartCounsellors = new Chart(ctx3, {
+          type: 'bar',
+          data: {
+            labels: sortedCounsellors.map(c => c[0]),
+            datasets: [{
+              label: 'Events',
+              data: sortedCounsellors.map(c => c[1]),
+              backgroundColor: chartColors.success,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+      }
+
+      // 4. Payment Distribution (Doughnut)
+      const paymentData = { PAID: 0, UNPAID: 0, FREE: 0 };
+      events.forEach(e => {
+        const status = (e.payment_status || 'UNPAID').toUpperCase();
+        if (paymentData.hasOwnProperty(status)) {
+          paymentData[status]++;
+        } else {
+          paymentData.UNPAID++;
+        }
+      });
+
+      const ctx4 = document.getElementById('chartPayment');
+      if (ctx4) {
+        chartPayment = new Chart(ctx4, {
+          type: 'doughnut',
+          data: {
+            labels: ['Paid', 'Unpaid', 'Free'],
+            datasets: [{
+              data: [paymentData.PAID, paymentData.UNPAID, paymentData.FREE],
+              backgroundColor: [chartColors.success, chartColors.warning, chartColors.primary],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+
+      // 5. Event Status (Pie Chart)
+      const statusData = { confirmed: 0, pending: 0, not_applicable: 0 };
+      events.forEach(e => {
+        const status = e.status || 'pending';
+        if (statusData.hasOwnProperty(status)) {
+          statusData[status]++;
+        } else {
+          statusData.pending++;
+        }
+      });
+
+      const ctx5 = document.getElementById('chartStatus');
+      if (ctx5) {
+        chartStatus = new Chart(ctx5, {
+          type: 'pie',
+          data: {
+            labels: ['Confirmed', 'Pending', 'N/A'],
+            datasets: [{
+              data: [statusData.confirmed, statusData.pending, statusData.not_applicable],
+              backgroundColor: [chartColors.success, chartColors.warning, chartColors.gray],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+
+      statisticsLoaded = true;
+      lucide.createIcons();
+      console.log('Charts rendered successfully');
+    }
+
+    // Render charts when Statistics tab is clicked
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.tab === 'statistics') {
+          setTimeout(loadAndRenderStatistics, 200);
+        }
+        if (btn.dataset.tab === 'counsellors') {
+          loadPresets();
+        }
+      });
+    });
+
+    // =========================================
+    // PRESET MANAGEMENT (Organizers, Event Names, Event Types)
+    // =========================================
+
+    async function loadPresets() {
+      await Promise.all([loadOrganizers(), loadEventNames(), loadEventTypes()]);
+      lucide.createIcons();
+    }
+
+    async function loadOrganizers() {
+      try {
+        const r = await api("/api/organizers");
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        const rows = data.rows || [];
+        document.getElementById("orgCount").textContent = rows.length;
+        document.getElementById("orgList").innerHTML = rows.length
+          ? rows.map((o, idx) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:8px;margin-bottom:8px;background:${idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg)'};border:1px solid var(--border);transition:all 0.2s;">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <span style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg, #3b82f6, #1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:12px;">🏢</span>
+                <strong style="font-size:13px;">${esc(o.name)}</strong>
+              </span>
+              <button class="btn tiny" style="background:rgba(239,68,68,0.1);color:#ef4444;border:none;padding:6px 10px;" onclick="deleteOrganizer(${o.id})" type="button">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          `).join("")
+          : '<div style="text-align:center;padding:24px;color:var(--muted);background:var(--bg-secondary);border-radius:8px;"><i data-lucide="building" style="width:24px;height:24px;margin-bottom:8px;opacity:0.5;"></i><p style="margin:0;">No organizers yet</p></div>';
+        lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadEventNames() {
+      try {
+        const r = await api("/api/event-names");
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        const rows = data.rows || [];
+        document.getElementById("evtNameCount").textContent = rows.length;
+        document.getElementById("evtNameList").innerHTML = rows.length
+          ? rows.map((o, idx) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:8px;margin-bottom:8px;background:${idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg)'};border:1px solid var(--border);transition:all 0.2s;">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <span style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg, #10b981, #059669);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:12px;">📋</span>
+                <strong style="font-size:13px;">${esc(o.name)}</strong>
+              </span>
+              <button class="btn tiny" style="background:rgba(239,68,68,0.1);color:#ef4444;border:none;padding:6px 10px;" onclick="deleteEventName(${o.id})" type="button">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          `).join("")
+          : '<div style="text-align:center;padding:24px;color:var(--muted);background:var(--bg-secondary);border-radius:8px;"><i data-lucide="tag" style="width:24px;height:24px;margin-bottom:8px;opacity:0.5;"></i><p style="margin:0;">No event names yet</p></div>';
+        lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadEventTypes() {
+      try {
+        const r = await api("/api/event-types");
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        const rows = data.rows || [];
+        document.getElementById("evtTypeCount").textContent = rows.length;
+        document.getElementById("evtTypeList").innerHTML = rows.length
+          ? rows.map((o, idx) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:8px;margin-bottom:8px;background:${idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg)'};border:1px solid var(--border);transition:all 0.2s;">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <span style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg, #8b5cf6, #6d28d9);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:12px;">🎯</span>
+                <strong style="font-size:13px;">${esc(o.name)}</strong>
+              </span>
+              <button class="btn tiny" style="background:rgba(239,68,68,0.1);color:#ef4444;border:none;padding:6px 10px;" onclick="deleteEventType(${o.id})" type="button">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          `).join("")
+          : '<div style="text-align:center;padding:24px;color:var(--muted);background:var(--bg-secondary);border-radius:8px;"><i data-lucide="layers" style="width:24px;height:24px;margin-bottom:8px;opacity:0.5;"></i><p style="margin:0;">No event types yet</p></div>';
+        lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Add Organizer
+    document.getElementById("addOrgForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const name = form.name.value.trim();
+      if (!name) return;
+      try {
+        const r = await api("/api/organizers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        form.reset();
+        loadOrganizers();
+        lucide.createIcons();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+
+    // Add Event Name
+    document.getElementById("addEvtNameForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const name = form.name.value.trim();
+      if (!name) return;
+      try {
+        const r = await api("/api/event-names", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        form.reset();
+        loadEventNames();
+        lucide.createIcons();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+
+    // Add Event Type
+    document.getElementById("addEvtTypeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const name = form.name.value.trim();
+      if (!name) return;
+      try {
+        const r = await api("/api/event-types", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        form.reset();
+        loadEventTypes();
+        lucide.createIcons();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+
+    // Delete functions
+    window.deleteOrganizer = async function (id) {
+      if (!confirm("Delete this organizer?")) return;
+      try {
+        const r = await api(`/api/organizers/${id}`, { method: "DELETE" });
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+        loadOrganizers();
+        lucide.createIcons();
+      } catch (e) { alert(e.message); }
+    };
+
+    window.deleteEventName = async function (id) {
+      if (!confirm("Delete this event name?")) return;
+      try {
+        const r = await api(`/api/event-names/${id}`, { method: "DELETE" });
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+        loadEventNames();
+        lucide.createIcons();
+      } catch (e) { alert(e.message); }
+    };
+
+    window.deleteEventType = async function (id) {
+      if (!confirm("Delete this event type?")) return;
+      try {
+        const r = await api(`/api/event-types/${id}`, { method: "DELETE" });
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+        loadEventTypes();
+        lucide.createIcons();
+      } catch (e) { alert(e.message); }
+    };
+
+    // =========================================
+    // COUNTRY COVERAGE PANEL (Right Panel)
+    // =========================================
+
+    async function loadCountryCoverage() {
+      const container = document.getElementById("countryCoverageList");
+      if (!container) return;
+
+      try {
+        // Use cached countrySuggestions if available
+        if (countrySuggestions.length === 0) {
+          const r = await api("/api/country-suggestions");
+          const data = await r.json();
+          if (r.ok) countrySuggestions = data.rows || [];
+        }
+
+        // Group by country
+        const countryMap = {};
+        countrySuggestions.forEach(cs => {
+          if (!countryMap[cs.country]) countryMap[cs.country] = [];
+          countryMap[cs.country].push(cs);
+        });
+
+        // Get all countries that have at least one assignment
+        const assignedCountries = Object.keys(countryMap).sort();
+
+        if (assignedCountries.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center;padding:40px 20px;color:var(--muted);background:var(--bg-secondary);border-radius:8px;margin-top:8px;">
+              <i data-lucide="globe" style="width:40px;height:40px;margin-bottom:12px;opacity:0.5;"></i>
+              <p style="margin:0 0 8px 0;font-weight:600;">No country assignments yet</p>
+              <p style="margin:0;font-size:12px;">Click <strong>Edit</strong> on a counsellor to assign countries.<br>Countries will appear here once assigned.</p>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        // Render collapsible accordion for each country
+        container.innerHTML = assignedCountries.map(country => {
+          const counsellors = countryMap[country] || [];
+          return `
+            <div class="country-coverage-item" style="margin-bottom:12px;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid var(--border);">
+              <div class="country-header" data-country="${esc(country)}" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;background:linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);transition:background 0.2s;">
+                <span style="display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:18px;">🌍</span>
+                  <strong style="font-size:14px;">${esc(country)}</strong>
+                  <span style="font-size:11px;background:linear-gradient(135deg, #f59e0b, #d97706);color:white;padding:3px 10px;border-radius:12px;font-weight:600;">${counsellors.length} counsellor${counsellors.length !== 1 ? 's' : ''}</span>
+                </span>
+                <i data-lucide="chevron-down" style="width:18px;height:18px;transition:transform 0.3s ease;color:var(--muted);"></i>
+              </div>
+              <div class="country-counsellors" style="display:none;padding:0;background:var(--bg);">
+                ${counsellors.map((c, idx) => `
+                  <div class="item" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border);${idx % 2 === 0 ? 'background:rgba(0,0,0,0.02);' : ''}">
+                    <span style="display:flex;align-items:center;gap:10px;">
+                      <span style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:600;font-size:13px;">${esc(c.full_name.charAt(0).toUpperCase())}</span>
+                      <span>
+                        <strong style="font-size:13px;">${esc(c.full_name)}</strong>
+                        <small style="color:var(--muted);display:block;font-size:11px;">@${esc(c.username)}</small>
+                      </span>
+                    </span>
+                    <button class="btn tiny" style="background:rgba(239,68,68,0.1);color:#ef4444;border:none;" onclick="removeCountryAssignment(${c.id})" type="button">
+                      <i data-lucide="user-minus" style="width:14px;height:14px;"></i> Remove
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        lucide.createIcons();
+
+        // Add click handlers for accordion
+        container.querySelectorAll('.country-header').forEach(header => {
+          header.addEventListener('click', () => {
+            const counsellorsDiv = header.nextElementSibling;
+            const icon = header.querySelector('i');
+            if (counsellorsDiv.style.display === 'none') {
+              counsellorsDiv.style.display = 'block';
+              icon.style.transform = 'rotate(180deg)';
+            } else {
+              counsellorsDiv.style.display = 'none';
+              icon.style.transform = 'rotate(0deg)';
+            }
+          });
+        });
+
+      } catch (e) {
+        console.error("Error loading country coverage:", e);
+        container.innerHTML = '<div style="color:var(--danger);padding:20px;">Error loading coverage</div>';
+      }
+    }
+
+    // Remove a country assignment
+    window.removeCountryAssignment = async function (suggestionId) {
+      if (!confirm("Remove this assignment?")) return;
+      try {
+        const r = await api(`/api/country-suggestions/${suggestionId}`, { method: "DELETE" });
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+        // Refresh both panels
+        countrySuggestions = [];
+        await loadUsers();
+      } catch (e) { alert(e.message); }
+    };
+
+    // Country Coverage search
+    document.getElementById("countrySearch")?.addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll(".country-coverage-item").forEach(item => {
+        const country = item.querySelector(".country-header")?.dataset.country || "";
+        item.style.display = country.toLowerCase().includes(query) ? '' : 'none';
+      });
+    });
+
+    document.getElementById("refreshCountryCoverage")?.addEventListener("click", async () => {
+      countrySuggestions = [];
+      await loadUsers();
+    });
+
+    // =========================================
+    // EDIT USER - COUNTRY ASSIGNMENT
+    // =========================================
+
+    let editUserSelectedCountries = new Set();
+
+    // Override openUserEdit to add country checkboxes
+    const originalOpenUserEdit = openUserEdit;
+    openUserEdit = async function (u) {
+      editingUser = u;
+      document.getElementById("userMeta").textContent = `${u.full_name} (${u.username})`;
+      document.getElementById("editName").value = u.full_name;
+      document.getElementById("editActive").value = String(u.is_active);
+      document.getElementById("editPass").value = "";
+      document.getElementById("userEditMsg").textContent = "";
+
+      // Get current countries for this user
+      editUserSelectedCountries = new Set();
+      countrySuggestions.forEach(cs => {
+        if (cs.counsellor_id === u.id) {
+          editUserSelectedCountries.add(cs.country);
+        }
+      });
+
+      // Populate country checkboxes
+      const countryList = document.getElementById("editCountryList");
+      const allCountries = window.WORLD_LOCATIONS || [];
+      countryList.innerHTML = allCountries.map(country => {
+        const checked = editUserSelectedCountries.has(country) ? 'checked' : '';
+        return `<label class="checkbox" style="display:flex;gap:8px;padding:6px;">
+          <input type="checkbox" name="editCountry" value="${esc(country)}" ${checked} />
+          ${esc(country)}
+        </label>`;
+      }).join('');
+
+      // Search filter for countries
+      document.getElementById("editCountrySearch").value = "";
+      document.getElementById("editCountrySearch").addEventListener("input", (e) => {
+        const query = e.target.value.toLowerCase();
+        countryList.querySelectorAll("label").forEach(label => {
+          const country = label.querySelector("input").value.toLowerCase();
+          label.style.display = country.includes(query) ? '' : 'none';
+        });
+      });
+
+      document.getElementById("userBack").style.display = "flex";
+      lucide.createIcons();
+    };
+
+    // Update saveUser to also save country assignments
+    const originalSaveUser = document.getElementById("saveUser").onclick;
+    document.getElementById("saveUser").addEventListener("click", async () => {
+      if (!editingUser) return;
+      const m = document.getElementById("userEditMsg");
+      m.textContent = ""; m.className = "msg";
+
+      const name = document.getElementById("editName").value.trim();
+      const isActive = document.getElementById("editActive").value;
+      const pass = document.getElementById("editPass").value;
+
+      // Get selected countries
+      const newCountries = new Set();
+      document.querySelectorAll("#editCountryList input[name='editCountry']:checked").forEach(cb => {
+        newCountries.add(cb.value);
+      });
+
+      try {
+        // Save user details
+        const body = { full_name: name, is_active: Number(isActive) === 1 };
+        if (pass) body.password = pass;
+
+        const r = await api(`/api/counsellors/${editingUser.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+
+        // Sync country assignments
+        // Remove countries that were removed
+        for (const country of editUserSelectedCountries) {
+          if (!newCountries.has(country)) {
+            // Find the suggestion ID and delete it
+            const suggestion = countrySuggestions.find(cs => cs.counsellor_id === editingUser.id && cs.country === country);
+            if (suggestion) {
+              await api(`/api/country-suggestions/${suggestion.id}`, { method: "DELETE" });
+            }
+          }
+        }
+
+        // Add new countries
+        for (const country of newCountries) {
+          if (!editUserSelectedCountries.has(country)) {
+            await api("/api/country-suggestions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ country, counsellor_id: editingUser.id })
+            });
+          }
+        }
+
+        m.className = "msg ok";
+        m.textContent = "Saved!";
+        setTimeout(() => { closeUserEdit(); countrySuggestions = []; loadUsers(); }, 500);
+      } catch (e) {
+        m.className = "msg err";
+        m.textContent = e.message;
+      }
+    });
+
+    // =============================================
+    // NOTIFICATION SETTINGS
+    // =============================================
+
+    async function loadNotificationSettings() {
+      try {
+        const r = await api('/api/notifications/settings');
+        const data = await r.json();
+        if (!data.ok) return;
+
+        const settings = data.settings;
+
+        // Update toggles
+        document.getElementById('eventReminderEnabled').checked = settings.event_reminder_enabled?.value === 'true';
+        document.getElementById('duplicateDetectionEnabled').checked = settings.duplicate_detection_enabled?.value === 'true';
+        document.getElementById('staffingWarningEnabled').checked = settings.staffing_warning_enabled?.value === 'true';
+        document.getElementById('anomalyDetectionEnabled').checked = settings.anomaly_detection_enabled?.value === 'true';
+        document.getElementById('weeklyReportEnabled').checked = settings.weekly_report_enabled?.value === 'true';
+      } catch (e) {
+        console.error('Failed to load notification settings:', e);
+      }
+    }
+
+    async function saveNotificationSettings() {
+      const m = document.getElementById('notificationSettingsMsg');
+      m.textContent = '';
+      m.className = 'msg';
+
+      try {
+        const settings = {
+          event_reminder_enabled: document.getElementById('eventReminderEnabled').checked ? 'true' : 'false',
+          duplicate_detection_enabled: document.getElementById('duplicateDetectionEnabled').checked ? 'true' : 'false',
+          staffing_warning_enabled: document.getElementById('staffingWarningEnabled').checked ? 'true' : 'false',
+          anomaly_detection_enabled: document.getElementById('anomalyDetectionEnabled').checked ? 'true' : 'false',
+          weekly_report_enabled: document.getElementById('weeklyReportEnabled').checked ? 'true' : 'false'
+        };
+
+        const r = await api('/api/notifications/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings })
+        });
+
+        const data = await r.json();
+
+        if (data.ok) {
+          m.className = 'msg ok';
+          m.textContent = 'Settings saved!';
+        } else {
+          throw new Error(data.error || 'Failed to save settings');
+        }
+      } catch (e) {
+        m.className = 'msg err';
+        m.textContent = e.message;
+      }
+    }
+
+    async function triggerNotificationCheck(type) {
+      try {
+        const r = await api(`/api/notifications/trigger/${type}`, { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) {
+          alert(data.message || 'Check triggered successfully');
+          // Reload notifications to show any new ones
+          if (typeof NotificationManager !== 'undefined') {
+            NotificationManager.loadNotifications();
+            NotificationManager.loadUnreadCount();
+          }
+        } else {
+          throw new Error(data.error || 'Trigger failed');
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // Event listeners for notification settings
+    document.getElementById('saveNotificationSettings')?.addEventListener('click', saveNotificationSettings);
+    document.getElementById('refreshNotificationSettings')?.addEventListener('click', loadNotificationSettings);
+    document.getElementById('triggerReminders')?.addEventListener('click', () => triggerNotificationCheck('reminders'));
+    document.getElementById('triggerOverload')?.addEventListener('click', () => triggerNotificationCheck('overload'));
+    document.getElementById('triggerAnomalies')?.addEventListener('click', () => triggerNotificationCheck('anomalies'));
+    document.getElementById('triggerWeeklyReport')?.addEventListener('click', () => triggerNotificationCheck('weekly-report'));
+
+    // Load notification settings on page load
+    loadNotificationSettings();
+
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,992 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Counsellor • Portal</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <!-- CUSTOM ALERT MODAL -->
+    <div id="alertBack" class="modal-backdrop" style="display:none; z-index:9999;">
+      <div class="modal" style="max-width:400px; border-top: 4px solid var(--danger);">
+        <h2 id="alertTitle" style="color: var(--danger); margin-top:0;">
+          <i data-lucide="alert-triangle" style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>
+          Cannot Edit
+        </h2>
+        <p id="alertBody" style="font-size:15px; line-height:1.6; margin: 16px 0; color: var(--text-secondary);">You
+          cannot edit this event.</p>
+        <div class="actions" style="justify-content:flex-end; margin-top:24px;">
+          <button class="btn primary" id="alertOk">Understood</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="brand">
+        <img src="/logo.jpg" alt="Logo" class="logo">
+        <div>
+          <p class="h1">Counsellor Portal</p>
+          <p class="sub">Submit events • View confirmation + final staffing</p>
+        </div>
+      </div>
+      <div class="actions" style="margin:0;">
+        <span id="who" class="pill">—</span>
+
+        <!-- Notification Bell -->
+        <div class="notification-bell">
+          <button id="notificationTrigger" class="notification-trigger" type="button" title="Notifications">
+            <i data-lucide="bell"></i>
+            <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+          </button>
+          <div class="notification-dropdown" id="notificationDropdown" style="display:none;">
+            <div class="notification-header">
+              <h3>Notifications</h3>
+              <button class="btn tiny" id="markAllRead" type="button">Mark all read</button>
+            </div>
+            <div class="notification-list" id="notificationList">
+              <div class="notification-empty">
+                <i data-lucide="bell-off"></i>
+                <p>Loading...</p>
+              </div>
+            </div>
+            <div class="notification-footer">
+              <a href="#" id="viewAllNotifications">View all notifications</a>
+            </div>
+          </div>
+        </div>
+
+        <button id="logout" class="btn danger" type="button">
+          <i data-lucide="log-out"></i> Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid" id="statsGrid" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-icon blue">
+          <i data-lucide="calendar-days"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total Events</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">
+          <i data-lucide="clock"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-label">Pending</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">
+          <i data-lucide="check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statConfirmed">0</div>
+          <div class="stat-label">Confirmed</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <i data-lucide="calendar-check"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value" id="statUpcoming">0</div>
+          <div class="stat-label">Upcoming</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUCCESS BANNER -->
+    <div id="banner" class="banner" style="display:none;">
+      <strong><i data-lucide="check-circle" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"></i>
+        Confirmed!</strong>
+      <div id="bannerText" class="sub" style="margin-top:6px;"></div>
+    </div>
+
+    <!-- EVENT SUBMISSION FORM -->
+    <section class="card" id="app" style="display:none;">
+      <div class="section-header" style="margin-bottom:20px;">
+        <div class="section-title">
+          <i data-lucide="plus-circle"></i>
+          <h2>Submit New Event(s)</h2>
+        </div>
+        <div class="actions" style="margin:0;">
+          <span class="pill" id="cityCountPill">0 cities</span>
+        </div>
+      </div>
+      <p class="sub" style="margin-bottom:16px;">
+        Enter organizer details once, then add multiple cities/dates below. Each city creates a separate event.
+      </p>
+      <div class="hr"></div>
+
+      <form id="form">
+        <!-- Shared Event Info -->
+        <div class="grid" style="margin-bottom:24px;">
+          <div>
+            <label>ORGANIZER *</label>
+            <select id="mainOrganizer" name="organizer_id" required>
+              <option value="">Select Organizer</option>
+            </select>
+          </div>
+          <div>
+            <label>EVENT NAME *</label>
+            <select id="mainEventName" name="event_name_id" required>
+              <option value="">Select Event Name</option>
+            </select>
+          </div>
+          <div>
+            <label>EVENT TYPE *</label>
+            <select id="mainEventType" name="event_type_id" required>
+              <option value="">Select Event Type</option>
+            </select>
+          </div>
+          <div>
+            <label>COUNTRY *</label>
+            <select id="mainCountry" name="country" required>
+              <option value="">Select Country</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Cities Section -->
+        <div
+          style="background:var(--bg-subtle); padding:20px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <label style="margin:0; font-size:13px;">CITIES & DATES</label>
+            <button class="btn small primary" type="button" id="addCityBtn">
+              <i data-lucide="map-pin-plus" style="width:14px;height:14px;"></i> Add City
+            </button>
+          </div>
+
+          <!-- Cities Container -->
+          <div id="citiesContainer"></div>
+
+          <div id="noCitiesMsg" style="text-align:center; padding:24px; color:var(--muted);">
+            <i data-lucide="map-pin" style="width:32px;height:32px;opacity:0.4;margin-bottom:8px;"></i>
+            <p style="margin:0;">Click "Add City" to add event locations</p>
+          </div>
+        </div>
+
+        <!-- Proposed Staffing -->
+        <div style="margin-bottom:24px;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+            <label style="margin:0;">PROPOSED STAFFING <span class="pill" style="font-size:10px;">Applied to
+                all</span></label>
+            <button class="btn small" type="button" id="suggestBtn">
+              <i data-lucide="users" style="width:14px;height:14px;"></i> Suggest Counsellors
+            </button>
+          </div>
+          <textarea name="proposed_staffing" id="mainProposed" rows="2"
+            placeholder="Click 'Suggest Counsellors' to see available staff..."></textarea>
+        </div>
+
+        <!-- Remarks -->
+        <div style="margin-bottom:24px;">
+          <label>REMARKS <span class="pill" style="font-size:10px;">Applied to all</span></label>
+          <textarea name="remarks" id="mainRemarks" rows="2"
+            placeholder="Any additional notes for all events..."></textarea>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="actions" id="submitActions" style="display:none;">
+          <button class="btn primary" type="button" id="submitAllBtn" style="padding:14px 32px; font-size:15px;">
+            <i data-lucide="send"></i> Submit All Events
+          </button>
+          <button class="btn danger" type="button" id="clearAllBtn">
+            <i data-lucide="trash-2"></i> Clear All
+          </button>
+          <button class="btn danger" type="button" id="cancelEdit" style="display:none;">
+            <i data-lucide="x"></i> Cancel Update
+          </button>
+        </div>
+        <p id="msg" class="msg"></p>
+      </form>
+    </section>
+
+    <!-- MY SUBMISSIONS TABLE -->
+    <section class="card" id="listCard" style="margin-top:24px; display:none;">
+      <div class="action-bar">
+        <div class="action-bar-left">
+          <div class="section-title">
+            <i data-lucide="list"></i>
+            <h2>My Submissions</h2>
+          </div>
+        </div>
+        <div class="action-bar-right">
+          <div class="search-wrapper" style="max-width:200px;">
+            <i data-lucide="search"></i>
+            <input type="text" class="search-input" id="searchSubmissions" placeholder="Search...">
+          </div>
+          <button id="refresh" class="btn" type="button">
+            <i data-lucide="refresh-cw"></i> Refresh
+          </button>
+          <span id="count" class="pill">—</span>
+        </div>
+      </div>
+      <p class="sub" style="margin-bottom:16px;">Auto-refreshes every 5 seconds</p>
+      <div class="tablewrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>DATES</th>
+              <th>LOCATION</th>
+              <th>ORGANIZER</th>
+              <th>PROPOSED</th>
+              <th>STATUS</th>
+              <th>ASSIGNED</th>
+              <th>REMARKS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MY ASSIGNED EVENTS (assigned by admin to this counsellor) -->
+    <section class="card" id="assignedCard" style="margin-top:24px; display:none;">
+      <div class="action-bar">
+        <div class="action-bar-left">
+          <div class="section-title">
+            <i data-lucide="calendar-check"></i>
+            <h2>My Assigned Events</h2>
+          </div>
+        </div>
+        <div class="action-bar-right">
+          <span id="assignedCount" class="pill">—</span>
+        </div>
+      </div>
+      <p class="sub" style="margin-bottom:16px;">Events you have been assigned to by Admin. These are events you're
+        confirmed to attend.</p>
+      <div class="tablewrap">
+        <table id="assignedTbl">
+          <thead>
+            <tr>
+              <th>DATES</th>
+              <th>LOCATION</th>
+              <th>ORGANIZER</th>
+              <th>STATUS</th>
+              <th>TEAM</th>
+              <th>SUBMITTED BY</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="noAssignments" style="display:none; text-align:center; padding:32px; color:var(--muted);">
+        <i data-lucide="inbox" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;"></i>
+        <p>No events assigned to you yet.</p>
+      </div>
+    </section>
+
+    <!-- NOT LOGGED IN -->
+    <div id="needLogin" class="card" style="display:none; text-align:center; padding:48px;">
+      <div style="margin-bottom:16px;">
+        <i data-lucide="lock" style="width:48px;height:48px;color:var(--muted);"></i>
+      </div>
+      <p class="h1">You are not logged in</p>
+      <p class="sub">Please sign in to access the counsellor portal.</p>
+      <div class="actions" style="justify-content:center;">
+        <a class="btn primary" href="/login.html">
+          <i data-lucide="log-in"></i> Go to Login
+        </a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SUGGEST COUNSELLORS MODAL -->
+  <div class="modal-backdrop" id="suggestBack">
+    <div class="modal" style="max-width:700px;">
+      <h2><i data-lucide="users" style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>Suggest
+        Counsellors</h2>
+      <p id="suggestMeta" class="sub">—</p>
+      <div class="hr" style="margin:16px 0;"></div>
+      <div class="split">
+        <div>
+          <label>Available Counsellors</label>
+          <div class="scroll-list" style="max-height:300px;">
+            <div class="list" id="suggestList"></div>
+          </div>
+          <p class="sub" style="margin-top:10px;">Only counsellors without overlapping <strong>confirmed</strong>
+            assignments are shown.</p>
+        </div>
+        <div>
+          <label>Selected Suggestions</label>
+          <textarea id="suggestSelected" rows="10" readonly style="background:var(--bg-subtle);"></textarea>
+          <div class="actions" style="margin-top:16px;">
+            <button class="btn primary" id="applySuggest" type="button">
+              <i data-lucide="check"></i> Apply Selection
+            </button>
+            <button class="btn" id="cancelSuggest" type="button">Cancel</button>
+          </div>
+          <span id="suggestMsg" class="msg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INITIALIZE LUCIDE ICONS -->
+  <script>
+    lucide.createIcons();
+  </script>
+
+  <script src="/shared.js"></script>
+  <script src="/locations.js"></script>
+  <script src="/notifications.js"></script>
+  <script>
+    // --- Multi-City Form Management ---
+    let cityCounter = 0;
+    let lastSeen = localStorage.getItem("last_seen_update") || null;
+    let editingId = null;
+    let allRows = [];
+    let allAssignedRows = [];
+
+    // Populate country dropdown
+    const mainCountry = document.getElementById('mainCountry');
+    if (window.WORLD_LOCATIONS) {
+      window.WORLD_LOCATIONS.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c; opt.textContent = c;
+        mainCountry.appendChild(opt);
+      });
+    }
+
+    // Fetch and populate preset dropdowns
+    async function loadPresets() {
+      try {
+        const r = await api('/api/presets');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+
+        const orgSel = document.getElementById('mainOrganizer');
+        const nameSel = document.getElementById('mainEventName');
+        const typeSel = document.getElementById('mainEventType');
+
+        orgSel.innerHTML = '<option value="">Select Organizer</option>' +
+          (data.organizers || []).map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('');
+        nameSel.innerHTML = '<option value="">Select Event Name</option>' +
+          (data.event_names || []).map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('');
+        typeSel.innerHTML = '<option value="">Select Event Type</option>' +
+          (data.event_types || []).map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('');
+      } catch (e) {
+        console.error('Failed to load presets:', e);
+      }
+    }
+
+    // Create a new city entry row
+    function createCityEntry(data = {}) {
+      cityCounter++;
+      const entryId = `city-entry-${cityCounter}`;
+      const entryHTML = `
+        <div class="city-entry" id="${entryId}" style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:#fff; border-radius:var(--radius-sm); margin-bottom:10px; border:1px solid var(--border);">
+          <div style="flex:1;">
+            <label style="font-size:11px;">CITY *</label>
+            <input name="city" required placeholder="e.g. London" value="${esc(data.city || '')}" style="width:100%;" />
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:11px;">START DATE *</label>
+            <input name="start_date" type="date" required value="${data.start_date || ''}" style="width:100%;" />
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:11px;">END DATE *</label>
+            <input name="end_date" type="date" required value="${data.end_date || ''}" style="width:100%;" />
+          </div>
+          <div style="padding-top:22px;">
+            <button type="button" class="btn tiny danger remove-city-btn" data-entry-id="${entryId}" title="Remove">
+              <i data-lucide="x" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      return entryHTML;
+    }
+
+    // Add new city entry
+    function addCityEntry(data = {}) {
+      const container = document.getElementById('citiesContainer');
+      container.insertAdjacentHTML('beforeend', createCityEntry(data));
+      updateCityCount();
+      updateSubmitVisibility();
+      document.getElementById('noCitiesMsg').style.display = 'none';
+      lucide.createIcons();
+      attachCityRemoveHandlers();
+    }
+
+    // Remove city entry
+    function removeCityEntry(entryId) {
+      const entry = document.getElementById(entryId);
+      if (entry) {
+        entry.remove();
+        updateCityCount();
+        updateSubmitVisibility();
+        if (document.querySelectorAll('.city-entry').length === 0) {
+          document.getElementById('noCitiesMsg').style.display = 'block';
+        }
+      }
+    }
+
+    // Update city count display
+    function updateCityCount() {
+      const count = document.querySelectorAll('.city-entry').length;
+      document.getElementById('cityCountPill').textContent = count + ' cit' + (count !== 1 ? 'ies' : 'y');
+    }
+
+    // Show/hide submit button based on city count
+    function updateSubmitVisibility() {
+      const count = document.querySelectorAll('.city-entry').length;
+      document.getElementById('submitActions').style.display = count > 0 ? 'flex' : 'none';
+    }
+
+    // Attach remove button handlers
+    function attachCityRemoveHandlers() {
+      document.querySelectorAll('.remove-city-btn').forEach(btn => {
+        btn.onclick = () => removeCityEntry(btn.getAttribute('data-entry-id'));
+      });
+    }
+
+    // Collect all event data (shared info + each city entry)
+    function collectEventData() {
+      const organizer_id = parseInt(document.getElementById('mainOrganizer').value) || null;
+      const event_name_id = parseInt(document.getElementById('mainEventName').value) || null;
+      const event_type_id = parseInt(document.getElementById('mainEventType').value) || null;
+      const country = document.getElementById('mainCountry').value;
+      const proposed_staffing = document.getElementById('mainProposed').value.trim();
+      const remarks = document.getElementById('mainRemarks').value.trim();
+
+      const events = [];
+      document.querySelectorAll('.city-entry').forEach(entry => {
+        events.push({
+          organizer_id,
+          event_name_id,
+          event_type_id,
+          country,
+          proposed_staffing,
+          remarks,
+          city: entry.querySelector('[name="city"]').value.trim(),
+          start_date: entry.querySelector('[name="start_date"]').value,
+          end_date: entry.querySelector('[name="end_date"]').value
+        });
+      });
+      return events;
+    }
+
+    // Validate form
+    function validateForm() {
+      // Validate shared fields
+      const organizer = document.getElementById('mainOrganizer');
+      const eventName = document.getElementById('mainEventName');
+      const eventType = document.getElementById('mainEventType');
+      const country = document.getElementById('mainCountry');
+      if (!organizer.value) { organizer.focus(); organizer.reportValidity(); return false; }
+      if (!eventName.value) { eventName.focus(); eventName.reportValidity(); return false; }
+      if (!eventType.value) { eventType.focus(); eventType.reportValidity(); return false; }
+      if (!country.value) { country.focus(); country.reportValidity(); return false; }
+
+      // Validate each city entry
+      const entries = document.querySelectorAll('.city-entry');
+      for (const entry of entries) {
+        const inputs = entry.querySelectorAll('input[required]');
+        for (const input of inputs) {
+          if (!input.value.trim()) { input.focus(); input.reportValidity(); return false; }
+        }
+        const sd = entry.querySelector('[name="start_date"]').value;
+        const ed = entry.querySelector('[name="end_date"]').value;
+        if (sd && ed && sd > ed) {
+          alert('End date cannot be before Start date.');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Clear all city entries
+    function clearAllCities() {
+      if (!confirm('Clear all cities?')) return;
+      document.getElementById('citiesContainer').innerHTML = '';
+      cityCounter = 0;
+      updateCityCount();
+      updateSubmitVisibility();
+      document.getElementById('noCitiesMsg').style.display = 'block';
+      document.getElementById('msg').textContent = '';
+      document.getElementById('msg').className = 'msg';
+    }
+
+    // Submit all events
+    async function submitAllEvents() {
+      if (!validateForm()) return;
+
+      const events = collectEventData();
+      if (events.length === 0) {
+        alert('Please add at least one city.');
+        return;
+      }
+
+      const msg = document.getElementById('msg');
+      msg.textContent = 'Submitting...';
+      msg.className = 'msg info';
+
+      try {
+        const r = await api('/api/submissions/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ events })
+        });
+
+        const data = await r.json();
+
+        if (!r.ok) {
+          msg.className = 'msg err';
+          msg.textContent = data.error || 'Submission failed.';
+          return;
+        }
+
+        // Success
+        msg.className = 'msg ok';
+        if (data.failed > 0) {
+          msg.textContent = `Submitted ${data.submitted} event(s). ${data.failed} failed.`;
+        } else {
+          msg.textContent = `Successfully submitted ${data.submitted} event(s)!`;
+        }
+
+        // Clear form on success
+        document.getElementById('citiesContainer').innerHTML = '';
+        document.getElementById('form').reset();
+        cityCounter = 0;
+        updateCityCount();
+        updateSubmitVisibility();
+        document.getElementById('noCitiesMsg').style.display = 'block';
+
+        // Refresh the list
+        await render();
+
+      } catch (e) {
+        console.error(e);
+        msg.className = 'msg err';
+        msg.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    // Stats update
+    function updateStats() {
+      const today = new Date().toISOString().split("T")[0];
+
+      const myTotal = allRows.length;
+      const myPending = allRows.filter(e => e.status === 'pending').length;
+      const myConfirmed = allRows.filter(e => e.status === 'confirmed').length;
+      const myUpcoming = allRows.filter(e => e.status === 'confirmed' && e.start_date >= today).length;
+
+      const assignedTotal = allAssignedRows.length;
+      // Assigned events are always considered "confirmed"
+      const assignedUpcoming = allAssignedRows.filter(e => e.start_date >= today).length;
+
+      document.getElementById('statTotal').textContent = myTotal + assignedTotal;
+      document.getElementById('statPending').textContent = myPending;
+      document.getElementById('statConfirmed').textContent = myConfirmed + assignedTotal;
+      document.getElementById('statUpcoming').textContent = myUpcoming + assignedUpcoming;
+    }
+
+    // Edit mode for single event (fills shared fields + adds one city)
+    function startEditing(r) {
+      editingId = r.id;
+      // Clear existing cities and fill in shared fields
+      document.getElementById('citiesContainer').innerHTML = '';
+      cityCounter = 0;
+
+      // Fill shared fields
+      document.getElementById('mainOrganizer').value = r.organizer || '';
+      document.getElementById('mainCountry').value = r.country || '';
+      document.getElementById('mainProposed').value = r.proposed_staffing || '';
+      document.getElementById('mainRemarks').value = r.remarks || '';
+
+      // Handle legacy country values
+      const cVal = r.country || "";
+      const countrySelect = document.getElementById('mainCountry');
+      if (!countrySelect.value && cVal) {
+        const opt = document.createElement("option");
+        opt.value = cVal;
+        opt.textContent = cVal + " (Legacy)";
+        countrySelect.appendChild(opt);
+        countrySelect.value = cVal;
+      }
+
+      // Add city entry
+      const s = r.start_date ? new Date(r.start_date).toISOString().split("T")[0] : "";
+      const e = r.end_date ? new Date(r.end_date).toISOString().split("T")[0] : "";
+      addCityEntry({ city: r.city || '', start_date: s, end_date: e });
+
+      document.getElementById('submitAllBtn').innerHTML = '<i data-lucide="save"></i> Update Submission';
+      document.getElementById('cancelEdit').style.display = 'inline-flex';
+      document.getElementById('clearAllBtn').style.display = 'none';
+      document.getElementById('app').scrollIntoView({ behavior: 'smooth' });
+      lucide.createIcons();
+
+      if (r.status === 'confirmed') {
+        alert("NOTE: You are editing a CONFIRMED event.\nSaving changes will reset the status to PENDING.");
+      }
+    }
+
+    function cancelEditing() {
+      editingId = null;
+      document.getElementById('citiesContainer').innerHTML = '';
+      document.getElementById('form').reset();
+      cityCounter = 0;
+      updateCityCount();
+      updateSubmitVisibility();
+      document.getElementById('noCitiesMsg').style.display = 'block';
+      document.getElementById('submitAllBtn').innerHTML = '<i data-lucide="send"></i> Submit All Events';
+      document.getElementById('cancelEdit').style.display = 'none';
+      document.getElementById('clearAllBtn').style.display = 'inline-flex';
+      document.getElementById('msg').textContent = '';
+      document.getElementById('msg').className = 'msg';
+      lucide.createIcons();
+    }
+
+    // Alert modal
+    function showAlert(title, body) {
+      document.getElementById("alertTitle").innerHTML = '<i data-lucide="alert-triangle" style="width:22px;height:22px;vertical-align:middle;margin-right:8px;"></i>' + title;
+      document.getElementById("alertBody").textContent = body;
+      document.getElementById("alertBack").style.display = "flex";
+      lucide.createIcons();
+    }
+
+    function showBanner(text) {
+      const b = document.getElementById("banner");
+      document.getElementById("bannerText").textContent = text;
+      b.style.display = "block";
+      setTimeout(() => b.style.display = "none", 9000);
+    }
+
+    async function fetchRows(onlySince = false) {
+      const p = new URLSearchParams();
+      if (onlySince && lastSeen) p.set("since", lastSeen);
+      const r = await api("/api/my-submissions" + (p.toString() ? ("?" + p.toString()) : ""));
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Failed");
+      return data.rows || [];
+    }
+
+    async function render() {
+      allRows = await fetchRows(false);
+      document.getElementById("count").textContent = allRows.length + " submissions";
+
+      const today = new Date().toISOString().split("T")[0];
+
+      document.querySelector("#tbl tbody").innerHTML = allRows.map(r => {
+        const remarksVal = esc(r.remarks || "");
+        let statusBadge = '<span class="badge pending">⏳ Pending</span>';
+        if (r.status === "confirmed") statusBadge = '<span class="badge confirmed">✓ Confirmed</span>';
+        else if (r.status === "not_applicable") statusBadge = '<span class="badge na">— N/A</span>';
+
+        return `
+        <tr>
+          <td><strong>${esc(fmtRange(r.start_date, r.end_date))}</strong><br><small style="color:var(--muted);">ID ${esc(r.id)}</small></td>
+          <td>${esc(r.city)}, ${esc(r.country)}</td>
+          <td>${esc(r.organizer)}</td>
+          <td><small>${esc(r.proposed_staffing || "—")}</small></td>
+          <td>${statusBadge}</td>
+          <td><small>${esc(r.final_staff_names || "—")}</small></td>
+          <td>
+            <textarea class="remarks-input table-textarea" data-remarks-id="${esc(r.id)}" rows="2" placeholder="Add remarks...">${remarksVal}</textarea>
+          </td>
+          <td>
+            ${r.status === "not_applicable"
+            ? '<span class="pill">N/A</span>'
+            : `<button class="btn tiny primary" data-edit="${esc(r.id)}"><i data-lucide="edit-2" style="width:14px;height:14px;"></i> Edit</button>`}
+          </td>
+        </tr>
+      `}).join("");
+
+      lucide.createIcons();
+      updateStats();
+
+      // Edit button handlers
+      document.querySelectorAll("[data-edit]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = Number(btn.getAttribute("data-edit"));
+          const r = allRows.find(x => x.id === id);
+          if (!r) return;
+
+          const canEdit = r.status === 'pending' || (r.status === 'confirmed' && r.start_date > today);
+          if (!canEdit) {
+            showAlert("Modification Not Allowed", "This event is confirmed and is starting soon (or has passed).");
+            return;
+          }
+          startEditing(r);
+        });
+      });
+
+      // Remarks textarea handlers
+      document.querySelectorAll(".remarks-input").forEach(textarea => {
+        textarea.addEventListener("blur", async () => {
+          const id = Number(textarea.getAttribute("data-remarks-id"));
+          const val = textarea.value;
+          textarea.disabled = true;
+          const r = await api(`/api/submissions/${id}/remarks`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ remarks: val })
+          });
+          textarea.disabled = false;
+          if (!r.ok) {
+            const data = await r.json();
+            alert(data.error || "Failed to update remarks");
+          }
+        });
+      });
+    }
+
+    // Search
+    document.getElementById('searchSubmissions').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('#tbl tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+      });
+    });
+
+    // Polling for updates
+    async function poll() {
+      try {
+        const updates = await fetchRows(true);
+        if (updates.length) {
+          const conf = updates.filter(x => x.status === "confirmed");
+          if (conf.length) {
+            const u = conf[0];
+            showBanner(`Confirmed: ${fmtRange(u.start_date, u.end_date)}. Assigned: ${u.final_staff_names}`);
+          }
+          lastSeen = new Date().toISOString();
+          localStorage.setItem("last_seen_update", lastSeen);
+          await render();
+        }
+      } catch { }
+    }
+
+    // Assigned events
+    async function renderAssignedEvents() {
+      try {
+        const r = await api("/api/my-assignments");
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "Failed");
+
+        const assignments = data.rows || [];
+        allAssignedRows = assignments;
+        document.getElementById("assignedCount").textContent = assignments.length + " assigned";
+
+        if (assignments.length === 0) {
+          document.getElementById("noAssignments").style.display = "block";
+          document.querySelector("#assignedTbl tbody").innerHTML = "";
+        } else {
+          document.getElementById("noAssignments").style.display = "none";
+          document.querySelector("#assignedTbl tbody").innerHTML = assignments.map(r => `
+            <tr>
+              <td><strong>${esc(fmtRange(r.start_date, r.end_date))}</strong><br><small style="color:var(--muted);">ID ${esc(r.id)}</small></td>
+              <td>${esc(r.city)}, ${esc(r.country)}</td>
+              <td>${esc(r.organizer)}</td>
+              <td><span class="badge confirmed">✓ Confirmed</span></td>
+              <td><small>${esc(r.final_staff_names || "—")}</small></td>
+              <td><small style="color:var(--muted);">${esc(r.submitted_by || "—")}</small></td>
+            </tr>
+          `).join("");
+        }
+        lucide.createIcons();
+        updateStats();
+      } catch (e) {
+        console.error("Error loading assignments:", e);
+      }
+    }
+
+    // Initialize
+    (async () => {
+      const user = await requireRole(["counsellor"]);
+      if (!user) { document.getElementById("needLogin").style.display = "block"; return; }
+      document.getElementById("who").textContent = user.username + " • counsellor";
+      document.getElementById("app").style.display = "block";
+      document.getElementById("listCard").style.display = "block";
+      document.getElementById("assignedCard").style.display = "block";
+      document.getElementById("statsGrid").style.display = "grid";
+      if (!lastSeen) { lastSeen = new Date().toISOString(); localStorage.setItem("last_seen_update", lastSeen); }
+      await loadPresets();
+      await render();
+      await renderAssignedEvents();
+      setInterval(poll, 5000);
+      setInterval(renderAssignedEvents, 10000);
+    })().catch(err => alert("Startup Error: " + err.message));
+
+    // Event listeners
+    document.getElementById("logout").addEventListener("click", () => { clearToken(); location.href = "/login.html"; });
+    document.getElementById("refresh").addEventListener("click", () => { render(); renderAssignedEvents(); });
+    document.getElementById("addCityBtn").addEventListener("click", () => addCityEntry());
+    document.getElementById("clearAllBtn").addEventListener("click", clearAllCities);
+    document.getElementById("cancelEdit").addEventListener("click", cancelEditing);
+    document.getElementById("alertOk").addEventListener("click", () => {
+      document.getElementById("alertBack").style.display = "none";
+    });
+    document.getElementById("form").addEventListener("submit", (e) => e.preventDefault());
+
+    // Submit all - handles both new batch and single edit
+    document.getElementById("submitAllBtn").addEventListener("click", async () => {
+      if (editingId) {
+        // Single edit mode
+        const events = collectEventData();
+        if (events.length !== 1) return;
+        if (!validateForm()) return;
+
+        const msg = document.getElementById('msg');
+        msg.textContent = 'Updating...';
+        msg.className = 'msg info';
+
+        try {
+          const r = await api(`/api/submissions/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(events[0])
+          });
+          const data = await r.json();
+          if (!r.ok) {
+            msg.className = 'msg err';
+            msg.textContent = data.error || 'Update failed.';
+            return;
+          }
+          msg.className = 'msg ok';
+          msg.textContent = 'Updated successfully.';
+          cancelEditing();
+          await render();
+        } catch (e) {
+          msg.className = 'msg err';
+          msg.textContent = 'Error: ' + e.message;
+        }
+      } else {
+        // Batch submit mode
+        await submitAllEvents();
+      }
+    });
+
+    // =========================================
+    // SUGGEST COUNSELLORS MODAL
+    // =========================================
+    let suggestSelectedIds = [];
+
+    document.getElementById("suggestBtn").addEventListener("click", openSuggestModal);
+    document.getElementById("cancelSuggest").addEventListener("click", () => { document.getElementById("suggestBack").style.display = "none"; });
+    document.getElementById("suggestBack").addEventListener("click", (e) => { if (e.target.id === "suggestBack") document.getElementById("suggestBack").style.display = "none"; });
+    document.getElementById("applySuggest").addEventListener("click", applySuggestion);
+
+    async function openSuggestModal() {
+      // Get date range from first city entry (if any) for availability check
+      const cityEntries = document.querySelectorAll('.city-entry');
+      let startDate = '', endDate = '';
+
+      if (cityEntries.length > 0) {
+        startDate = cityEntries[0].querySelector('[name="start_date"]').value;
+        endDate = cityEntries[0].querySelector('[name="end_date"]').value;
+      }
+
+      if (!startDate || !endDate) {
+        alert('Please add at least one city with dates first to check counsellor availability.');
+        return;
+      }
+
+      // Get selected country to fetch suggestions
+      const selectedCountry = document.getElementById('mainCountry').value;
+
+      document.getElementById("suggestMeta").textContent = `Checking availability for ${startDate} to ${endDate}`;
+      document.getElementById("suggestList").innerHTML = '<div class="item" style="justify-content:center;">Loading...</div>';
+      document.getElementById("suggestBack").style.display = "flex";
+      suggestSelectedIds = [];
+      updateSuggestText();
+
+      try {
+        // Fetch availability
+        const r = await api(`/api/staff-availability?start=${startDate}&end=${endDate}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+
+        let rows = data.rows || [];
+        if (rows.length === 0) {
+          document.getElementById("suggestList").innerHTML = '<div class="item" style="justify-content:center;color:var(--muted);">No counsellors found</div>';
+          return;
+        }
+
+        // Fetch country suggestions if a country is selected
+        let suggestedIds = new Set();
+        if (selectedCountry) {
+          try {
+            const suggestR = await api(`/api/country-suggestions/${encodeURIComponent(selectedCountry)}`);
+            const suggestData = await suggestR.json();
+            if (suggestR.ok && suggestData.suggested_ids) {
+              suggestedIds = new Set(suggestData.suggested_ids);
+            }
+          } catch (e) {
+            console.warn('Failed to load country suggestions:', e);
+          }
+        }
+
+        // Sort: suggested counsellors first (maintaining availability sort within each group)
+        rows.sort((a, b) => {
+          const aIsSuggested = suggestedIds.has(a.id) ? 0 : 1;
+          const bIsSuggested = suggestedIds.has(b.id) ? 0 : 1;
+          if (aIsSuggested !== bIsSuggested) return aIsSuggested - bIsSuggested;
+          // Within same group, available first
+          if (a.available !== b.available) return a.available ? -1 : 1;
+          return 0;
+        });
+
+        document.getElementById("suggestList").innerHTML = rows.map(c => {
+          const isSuggested = suggestedIds.has(c.id);
+          return `
+          <div class="item ${isSuggested ? 'suggested' : ''}" style="cursor:pointer;${isSuggested ? 'background:linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);border-left:4px solid #f59e0b;padding-left:10px;border-radius:6px;' : ''}" onclick="toggleSuggest(${c.id}, '${esc(c.full_name)}')">
+            <span>
+              ${c.available ? '🟢' : '🔴'} ${esc(c.full_name)} <small style="color:var(--muted);">(${esc(c.username)})</small>
+              ${isSuggested ? '<span style="font-size:10px;margin-left:8px;background:linear-gradient(135deg, #f59e0b, #d97706);color:white;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">★ Recommended</span>' : ''}
+              ${!c.available ? `<br><small style="color:var(--danger);">Busy: ${c.conflicts.map(x => x.city).join(', ')}</small>` : ''}
+            </span>
+            <input type="checkbox" id="suggest-${c.id}" ${c.available ? '' : 'disabled'} />
+          </div>
+        `}).join('');
+        lucide.createIcons();
+      } catch (e) {
+        document.getElementById("suggestList").innerHTML = `<div class="item" style="color:var(--danger);">Error: ${e.message}</div>`;
+      }
+    }
+
+    window.toggleSuggest = function (id, name) {
+      const checkbox = document.getElementById(`suggest-${id}`);
+      if (checkbox && checkbox.disabled) return;
+
+      const idx = suggestSelectedIds.findIndex(x => x.id === id);
+      if (idx >= 0) {
+        suggestSelectedIds.splice(idx, 1);
+        if (checkbox) checkbox.checked = false;
+      } else {
+        suggestSelectedIds.push({ id, name });
+        if (checkbox) checkbox.checked = true;
+      }
+      updateSuggestText();
+    };
+
+    function updateSuggestText() {
+      document.getElementById("suggestSelected").value = suggestSelectedIds.map(x => x.name).join('\n');
+    }
+
+    function applySuggestion() {
+      const names = suggestSelectedIds.map(x => x.name).join(', ');
+      document.getElementById("mainProposed").value = names;
+      document.getElementById("suggestBack").style.display = "none";
+    }
+  </script>
+</body>
+
+</html>
